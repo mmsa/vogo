@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: vogo
+      POSTGRES_PASSWORD: vogo
+      POSTGRES_DB: vogo
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vogo"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pg: {}
+

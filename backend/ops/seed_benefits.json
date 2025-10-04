@@ -1,0 +1,386 @@
+{
+  "memberships": [
+    {
+      "name": "Revolut Premium",
+      "provider_slug": "revolut-premium",
+      "benefits": [
+        {
+          "title": "Airport Lounge Access",
+          "description": "Access to 1,000+ airport lounges worldwide with LoungeKey",
+          "vendor_domain": "loungekey.com",
+          "category": "lounge_access",
+          "source_url": "https://www.revolut.com/en-GB/premium"
+        },
+        {
+          "title": "Travel Insurance",
+          "description": "Comprehensive worldwide travel insurance for trips up to 45 days",
+          "vendor_domain": "allianz-assistance.co.uk",
+          "category": "travel_insurance",
+          "source_url": "https://www.revolut.com/en-GB/help/premium-plans/travel-insurance"
+        },
+        {
+          "title": "Device Insurance Discount",
+          "description": "20% discount on device insurance with Simplesurance",
+          "vendor_domain": "simplesurance.com",
+          "category": "device_insurance",
+          "source_url": "https://www.revolut.com/en-GB/premium"
+        },
+        {
+          "title": "Booking.com Cashback",
+          "description": "5% cashback on Booking.com purchases",
+          "vendor_domain": "booking.com",
+          "category": "cashback",
+          "source_url": "https://www.revolut.com/en-GB/rewards"
+        },
+        {
+          "title": "Commission-Free Trading",
+          "description": "Trade stocks and crypto with no commission fees",
+          "vendor_domain": "revolut.com",
+          "category": "finance",
+          "source_url": "https://www.revolut.com/en-GB/trading"
+        }
+      ]
+    },
+    {
+      "name": "Lloyds Platinum Account",
+      "provider_slug": "lloyds-platinum",
+      "benefits": [
+        {
+          "title": "Worldwide Travel Insurance",
+          "description": "Annual multi-trip travel insurance covering worldwide travel",
+          "vendor_domain": "allianz-assistance.co.uk",
+          "category": "travel_insurance",
+          "source_url": "https://www.lloydsbank.com/premier-banking/travel-insurance.html"
+        },
+        {
+          "title": "AA Breakdown Cover",
+          "description": "UK and European breakdown cover included",
+          "vendor_domain": "aa.co.uk",
+          "category": "breakdown_cover",
+          "source_url": "https://www.lloydsbank.com/premier-banking/breakdown-cover.html"
+        },
+        {
+          "title": "Mobile Phone Insurance",
+          "description": "Cover for loss, theft, and accidental damage up to £1,500",
+          "vendor_domain": "lloydsbank.com",
+          "category": "device_insurance",
+          "source_url": "https://www.lloydsbank.com/premier-banking/mobile-insurance.html"
+        },
+        {
+          "title": "Home Emergency Cover",
+          "description": "24/7 emergency home assistance",
+          "vendor_domain": "lloydsbank.com",
+          "category": "home_insurance",
+          "source_url": "https://www.lloydsbank.com/premier-banking.html"
+        },
+        {
+          "title": "Cinema Tickets",
+          "description": "Free cinema tickets every month with Lloyds Cinema Club",
+          "vendor_domain": "lloydsbankcinema.com",
+          "category": "entertainment",
+          "source_url": "https://www.lloydsbankcinema.com"
+        }
+      ]
+    },
+    {
+      "name": "Virgin Media Volt",
+      "provider_slug": "virgin-media-volt",
+      "benefits": [
+        {
+          "title": "O2 Priority",
+          "description": "Access to O2 Priority perks including concert pre-sales and offers",
+          "vendor_domain": "priority.o2.co.uk",
+          "category": "entertainment",
+          "source_url": "https://www.virginmedia.com/volt"
+        },
+        {
+          "title": "Speed Boost",
+          "description": "Double broadband speeds at no extra cost",
+          "vendor_domain": "virginmedia.com",
+          "category": "broadband",
+          "source_url": "https://www.virginmedia.com/volt"
+        },
+        {
+          "title": "Data Boost",
+          "description": "Extra mobile data on O2 plans",
+          "vendor_domain": "o2.co.uk",
+          "category": "mobile",
+          "source_url": "https://www.virginmedia.com/volt"
+        }
+      ]
+    },
+    {
+      "name": "O2 Priority",
+      "provider_slug": "o2-priority",
+      "benefits": [
+        {
+          "title": "Priority Tickets",
+          "description": "Exclusive pre-sale access to concerts and events",
+          "vendor_domain": "priority.o2.co.uk",
+          "category": "entertainment",
+          "source_url": "https://priority.o2.co.uk"
+        },
+        {
+          "title": "Food & Drink Offers",
+          "description": "Exclusive discounts at restaurants and cafes",
+          "vendor_domain": "priority.o2.co.uk",
+          "category": "food_drink",
+          "source_url": "https://priority.o2.co.uk"
+        },
+        {
+          "title": "Free Roaming",
+          "description": "Use your UK allowance in 75+ destinations",
+          "vendor_domain": "o2.co.uk",
+          "category": "mobile",
+          "source_url": "https://www.o2.co.uk/international/using-your-phone-abroad"
+        },
+        {
+          "title": "Coffee Rewards",
+          "description": "Weekly free coffee from selected cafes",
+          "vendor_domain": "priority.o2.co.uk",
+          "category": "food_drink",
+          "source_url": "https://priority.o2.co.uk"
+        }
+      ]
+    },
+    {
+      "name": "AA Membership",
+      "provider_slug": "aa-membership",
+      "benefits": [
+        {
+          "title": "Roadside Assistance",
+          "description": "24/7 roadside breakdown assistance",
+          "vendor_domain": "aa.co.uk",
+          "category": "breakdown_cover",
+          "source_url": "https://www.theaa.com/breakdown-cover"
+        },
+        {
+          "title": "Home Breakdown",
+          "description": "Assistance if your vehicle breaks down at home",
+          "vendor_domain": "aa.co.uk",
+          "category": "breakdown_cover",
+          "source_url": "https://www.theaa.com/breakdown-cover/home-start"
+        },
+        {
+          "title": "Hotel Discounts",
+          "description": "Up to 20% off hotels and accommodation",
+          "vendor_domain": "booking.com",
+          "category": "travel",
+          "source_url": "https://www.theaa.com/rewards"
+        },
+        {
+          "title": "Restaurant Discounts",
+          "description": "Exclusive dining discounts",
+          "vendor_domain": "aa.co.uk",
+          "category": "food_drink",
+          "source_url": "https://www.theaa.com/rewards"
+        }
+      ]
+    },
+    {
+      "name": "Barclays Blue Rewards",
+      "provider_slug": "barclays-blue-rewards",
+      "benefits": [
+        {
+          "title": "Monthly Reward Payment",
+          "description": "Earn up to £7/month for eligible Barclays products",
+          "vendor_domain": "barclays.co.uk",
+          "category": "cashback",
+          "source_url": "https://www.barclays.co.uk/current-accounts/blue-rewards/"
+        },
+        {
+          "title": "Lifestyle Offers",
+          "description": "Exclusive offers on dining, shopping, and experiences",
+          "vendor_domain": "barclays.co.uk",
+          "category": "lifestyle",
+          "source_url": "https://www.barclays.co.uk/ways-to-bank/lifestyle-benefits/"
+        }
+      ]
+    },
+    {
+      "name": "Amazon Prime",
+      "provider_slug": "amazon-prime",
+      "benefits": [
+        {
+          "title": "Free Delivery",
+          "description": "Free unlimited one-day delivery on millions of items",
+          "vendor_domain": "amazon.co.uk",
+          "category": "shopping",
+          "source_url": "https://www.amazon.co.uk/prime"
+        },
+        {
+          "title": "Prime Video",
+          "description": "Stream thousands of movies and TV shows",
+          "vendor_domain": "primevideo.com",
+          "category": "entertainment",
+          "source_url": "https://www.amazon.co.uk/primevideo"
+        },
+        {
+          "title": "Prime Music",
+          "description": "Access to 100 million songs ad-free",
+          "vendor_domain": "music.amazon.co.uk",
+          "category": "entertainment",
+          "source_url": "https://music.amazon.co.uk"
+        },
+        {
+          "title": "Prime Gaming",
+          "description": "Free games and in-game content every month",
+          "vendor_domain": "gaming.amazon.com",
+          "category": "gaming",
+          "source_url": "https://gaming.amazon.com"
+        },
+        {
+          "title": "Prime Reading",
+          "description": "Free access to thousands of books and magazines",
+          "vendor_domain": "amazon.co.uk",
+          "category": "books",
+          "source_url": "https://www.amazon.co.uk/kindle/prime-reading"
+        }
+      ]
+    },
+    {
+      "name": "Amex Platinum",
+      "provider_slug": "amex-platinum",
+      "benefits": [
+        {
+          "title": "Airport Lounge Access",
+          "description": "Complimentary access to 1,300+ airport lounges worldwide",
+          "vendor_domain": "loungekey.com",
+          "category": "lounge_access",
+          "source_url": "https://www.americanexpress.com/uk/benefits/the-platinum-card/"
+        },
+        {
+          "title": "Travel Insurance",
+          "description": "Comprehensive worldwide travel insurance",
+          "vendor_domain": "americanexpress.com",
+          "category": "travel_insurance",
+          "source_url": "https://www.americanexpress.com/uk/insurance/travel/"
+        },
+        {
+          "title": "Hotel Credits",
+          "description": "£150 annual hotel credit with selected partners",
+          "vendor_domain": "booking.com",
+          "category": "travel",
+          "source_url": "https://www.americanexpress.com/uk/benefits/the-platinum-card/"
+        },
+        {
+          "title": "Dining Credits",
+          "description": "£100 annual dining credit at selected restaurants",
+          "vendor_domain": "americanexpress.com",
+          "category": "food_drink",
+          "source_url": "https://www.americanexpress.com/uk/benefits/the-platinum-card/"
+        },
+        {
+          "title": "Entertainment Credits",
+          "description": "Annual entertainment credits for streaming services",
+          "vendor_domain": "americanexpress.com",
+          "category": "entertainment",
+          "source_url": "https://www.americanexpress.com/uk/benefits/the-platinum-card/"
+        }
+      ]
+    },
+    {
+      "name": "RAC Breakdown Cover",
+      "provider_slug": "rac-breakdown",
+      "benefits": [
+        {
+          "title": "Roadside Assistance",
+          "description": "24/7 breakdown assistance anywhere in the UK",
+          "vendor_domain": "rac.co.uk",
+          "category": "breakdown_cover",
+          "source_url": "https://www.rac.co.uk/breakdown-cover"
+        },
+        {
+          "title": "Recovery Service",
+          "description": "Vehicle recovery to any UK destination",
+          "vendor_domain": "rac.co.uk",
+          "category": "breakdown_cover",
+          "source_url": "https://www.rac.co.uk/breakdown-cover/roadside-recovery"
+        },
+        {
+          "title": "European Breakdown",
+          "description": "Breakdown cover across Europe",
+          "vendor_domain": "rac.co.uk",
+          "category": "breakdown_cover",
+          "source_url": "https://www.rac.co.uk/breakdown-cover/european"
+        },
+        {
+          "title": "RAC Rewards",
+          "description": "Discounts on hotels, days out and shopping",
+          "vendor_domain": "rac.co.uk",
+          "category": "lifestyle",
+          "source_url": "https://www.rac.co.uk/rewards"
+        }
+      ]
+    },
+    {
+      "name": "Spotify Premium Family",
+      "provider_slug": "spotify-premium-family",
+      "benefits": [
+        {
+          "title": "Ad-Free Music",
+          "description": "Listen to millions of songs without ads",
+          "vendor_domain": "spotify.com",
+          "category": "entertainment",
+          "source_url": "https://www.spotify.com/uk/premium/"
+        },
+        {
+          "title": "Offline Listening",
+          "description": "Download music to listen offline",
+          "vendor_domain": "spotify.com",
+          "category": "entertainment",
+          "source_url": "https://www.spotify.com/uk/premium/"
+        },
+        {
+          "title": "Family Mix",
+          "description": "Personalized playlist for the whole family",
+          "vendor_domain": "spotify.com",
+          "category": "entertainment",
+          "source_url": "https://www.spotify.com/uk/family/"
+        }
+      ]
+    },
+    {
+      "name": "Costco Membership",
+      "provider_slug": "costco-membership",
+      "benefits": [
+        {
+          "title": "Bulk Discounts",
+          "description": "Save on bulk purchases across groceries and household items",
+          "vendor_domain": "costco.co.uk",
+          "category": "shopping",
+          "source_url": "https://www.costco.co.uk"
+        },
+        {
+          "title": "Fuel Savings",
+          "description": "Save up to 10p per litre on fuel",
+          "vendor_domain": "costco.co.uk",
+          "category": "fuel",
+          "source_url": "https://www.costco.co.uk/fuel"
+        },
+        {
+          "title": "Pharmacy Savings",
+          "description": "Competitive prices on prescriptions",
+          "vendor_domain": "costco.co.uk",
+          "category": "health",
+          "source_url": "https://www.costco.co.uk/pharmacy"
+        },
+        {
+          "title": "Tyre Centre",
+          "description": "Discounted tyre fitting and servicing",
+          "vendor_domain": "costco.co.uk",
+          "category": "automotive",
+          "source_url": "https://www.costco.co.uk/tyre-centre"
+        },
+        {
+          "title": "Travel Deals",
+          "description": "Exclusive travel and holiday packages",
+          "vendor_domain": "costco.co.uk",
+          "category": "travel",
+          "source_url": "https://www.costcotravel.co.uk"
+        }
+      ]
+    }
+  ]
+}
+
