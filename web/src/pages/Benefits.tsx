@@ -1,148 +1,168 @@
-import { useState, useEffect } from 'react'
-import { api, CURRENT_USER_ID, Benefit, Membership } from '@/lib/api'
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { Gift, Plus } from "lucide-react";
+import { api, CURRENT_USER_ID, Benefit, Membership } from "@/lib/api";
+import { SectionHeader } from "@/components/SectionHeader";
+import { BenefitCard } from "@/components/BenefitCard";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { Accordion, AccordionItem } from "@/components/ui/Accordion";
 
 interface BenefitWithMembership extends Benefit {
-  membership?: Membership
+  membership?: Membership;
 }
 
 export default function Benefits() {
-  const [benefits, setBenefits] = useState<BenefitWithMembership[]>([])
+  const [benefits, setBenefits] = useState<BenefitWithMembership[]>([]);
   const [memberships, setMemberships] = useState<Map<number, Membership>>(
     new Map()
-  )
-  const [loading, setLoading] = useState(true)
+  );
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadBenefits()
-  }, [])
+    loadBenefits();
+  }, []);
 
   const loadBenefits = async () => {
     try {
-      setLoading(true)
+      setLoading(true);
       const [benefitsData, membershipsData] = await Promise.all([
         api.getUserBenefits(CURRENT_USER_ID),
         api.getMemberships(),
-      ])
+      ]);
 
       // Create membership lookup map
-      const membershipMap = new Map(
-        membershipsData.map(m => [m.id, m])
-      )
-      setMemberships(membershipMap)
+      const membershipMap = new Map(membershipsData.map((m) => [m.id, m]));
+      setMemberships(membershipMap);
 
       // Attach membership info to benefits
-      const enrichedBenefits = benefitsData.map(benefit => ({
+      const enrichedBenefits = benefitsData.map((benefit) => ({
         ...benefit,
         membership: membershipMap.get(benefit.membership_id),
-      }))
+      }));
 
-      setBenefits(enrichedBenefits)
+      setBenefits(enrichedBenefits);
     } catch (error) {
-      console.error('Failed to load benefits:', error)
+      console.error("Failed to load benefits:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="text-gray-500">Loading...</div>
-      </div>
-    )
-  }
+  };
 
   // Group benefits by membership
   const benefitsByMembership = benefits.reduce((acc, benefit) => {
-    const membershipId = benefit.membership_id
+    const membershipId = benefit.membership_id;
     if (!acc[membershipId]) {
-      acc[membershipId] = []
+      acc[membershipId] = [];
     }
-    acc[membershipId].push(benefit)
-    return acc
-  }, {} as Record<number, BenefitWithMembership[]>)
+    acc[membershipId].push(benefit);
+    return acc;
+  }, {} as Record<number, BenefitWithMembership[]>);
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-64 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
 
   return (
-    <div className="px-4 py-6 sm:px-0">
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">
-        Your Benefits
-      </h1>
+    <div className="space-y-6 animate-fade-in">
+      {/* Header */}
+      <SectionHeader
+        title="Your Benefits"
+        description="All the perks and benefits from your active memberships"
+      />
 
+      {/* Empty State */}
       {benefits.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-lg shadow">
-          <p className="text-gray-500 mb-4">
-            You don't have any memberships yet.
+        <Card className="p-12 text-center">
+          <Gift className="w-16 h-16 text-zinc-400 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
+            No benefits yet
+          </h3>
+          <p className="text-zinc-600 dark:text-zinc-400 mb-6">
+            Add memberships to unlock benefits and perks
           </p>
-          <a
-            href="/memberships"
-            className="text-indigo-600 hover:text-indigo-500"
-          >
-            Add memberships to see benefits →
-          </a>
-        </div>
+          <Link to="/memberships">
+            <Button className="gap-2">
+              <Plus className="w-5 h-5" />
+              Add Memberships
+            </Button>
+          </Link>
+        </Card>
       ) : (
-        <div className="space-y-8">
-          {Object.entries(benefitsByMembership).map(
-            ([membershipId, membershipBenefits]) => {
-              const membership = memberships.get(Number(membershipId))
-              return (
-                <div key={membershipId} className="bg-white shadow rounded-lg">
-                  <div className="px-6 py-4 border-b border-gray-200">
-                    <h2 className="text-xl font-semibold text-gray-900">
-                      {membership?.name || 'Unknown Membership'}
-                    </h2>
-                    <p className="text-sm text-gray-500 mt-1">
-                      {membershipBenefits.length} benefit
-                      {membershipBenefits.length !== 1 ? 's' : ''}
-                    </p>
-                  </div>
-                  <div className="divide-y divide-gray-200">
-                    {membershipBenefits.map(benefit => (
-                      <div key={benefit.id} className="px-6 py-4">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <h3 className="text-base font-medium text-gray-900">
-                              {benefit.title}
-                            </h3>
-                            {benefit.description && (
-                              <p className="text-sm text-gray-600 mt-1">
-                                {benefit.description}
-                              </p>
-                            )}
-                            <div className="mt-2 flex flex-wrap gap-2">
-                              {benefit.category && (
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                                  {benefit.category.replace('_', ' ')}
-                                </span>
-                              )}
-                              {benefit.vendor_domain && (
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                  {benefit.vendor_domain}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          {benefit.source_url && (
-                            <a
-                              href={benefit.source_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="ml-4 inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-indigo-700 bg-indigo-100 hover:bg-indigo-200"
-                            >
-                              Learn More
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          {/* Main Content */}
+          <div className="xl:col-span-2">
+            <Accordion>
+              {Object.entries(benefitsByMembership).map(
+                ([membershipId, membershipBenefits], index) => {
+                  const membership = memberships.get(Number(membershipId));
+                  return (
+                    <div
+                      key={membershipId}
+                      className="animate-fade-in"
+                      style={{ animationDelay: `${index * 50}ms` }}
+                    >
+                      <AccordionItem
+                        title={membership?.name || "Unknown Membership"}
+                        description={`${membershipBenefits.length} benefit${
+                          membershipBenefits.length !== 1 ? "s" : ""
+                        }`}
+                        defaultOpen={index === 0}
+                      >
+                        {membershipBenefits.map((benefit) => (
+                          <BenefitCard key={benefit.id} benefit={benefit} />
+                        ))}
+                      </AccordionItem>
+                    </div>
+                  );
+                }
+              )}
+            </Accordion>
+          </div>
+
+          {/* Sidebar - Sticky on XL+ */}
+          <div className="space-y-6">
+            {/* Quick Stats */}
+            <Card className="p-6 sticky top-24">
+              <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
+                Overview
+              </h3>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                    Total Benefits
+                  </span>
+                  <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                    {benefits.length}
+                  </span>
                 </div>
-              )
-            }
-          )}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                    Active Memberships
+                  </span>
+                  <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                    {Object.keys(benefitsByMembership).length}
+                  </span>
+                </div>
+                <div className="pt-3 border-t border-zinc-200 dark:border-zinc-800">
+                  <Link to="/recommendations">
+                    <Button variant="secondary" className="w-full">
+                      View Recommendations
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </Card>
+          </div>
         </div>
       )}
     </div>
-  )
+  );
 }
-

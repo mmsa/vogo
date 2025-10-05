@@ -29,10 +29,12 @@ def match_benefits_for_domain(db: Session, user_id: int, domain: str) -> List[Be
         return []
     
     # Phase 1: Exact and substring match on vendor_domain
+    # Only match APPROVED benefits
     domain_lower = domain.lower()
     benefits = db.query(Benefit).filter(
         Benefit.membership_id.in_(membership_ids),
-        Benefit.vendor_domain.ilike(f"%{domain_lower}%")
+        Benefit.vendor_domain.ilike(f"%{domain_lower}%"),
+        Benefit.validation_status == "approved"
     ).all()
     
     return benefits

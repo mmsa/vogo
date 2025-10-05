@@ -39,11 +39,13 @@ def recommend(
     
     membership_ids = [um.membership_id for um in user_memberships]
     
-    # Get all benefits for user's memberships with membership info
+    # Get all APPROVED benefits for user's memberships with membership info
+    # Exclude pending/rejected benefits from recommendations
     benefits = db.query(Benefit, Membership).join(
         Membership, Benefit.membership_id == Membership.id
     ).filter(
-        Benefit.membership_id.in_(membership_ids)
+        Benefit.membership_id.in_(membership_ids),
+        Benefit.validation_status == "approved"
     ).all()
     
     # Group by category to find overlaps

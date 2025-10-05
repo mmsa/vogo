@@ -1,299 +1,219 @@
-import { useState, useEffect } from 'react'
-import { api, CURRENT_USER_ID, Recommendation, Benefit } from '@/lib/api'
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { Sparkles, Lightbulb, Plus, Loader2 } from "lucide-react";
+import { api, CURRENT_USER_ID, Recommendation, Benefit } from "@/lib/api";
+import { SectionHeader } from "@/components/SectionHeader";
+import { RecommendationCard } from "@/components/RecommendationCard";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { Switch } from "@/components/ui/Switch";
 
 export default function Recommendations() {
-  const [recommendations, setRecommendations] = useState<Recommendation[]>([])
-  const [relevantBenefits, setRelevantBenefits] = useState<Benefit[]>([])
-  const [loading, setLoading] = useState(true)
-  const [aiMode, setAiMode] = useState(false)
-  
-  // Cache for instant toggle switching
-  const [cachedRuleBased, setCachedRuleBased] = useState<Recommendation[] | null>(null)
-  const [cachedAI, setCachedAI] = useState<{recs: Recommendation[], benefits: Benefit[]} | null>(null)
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [relevantBenefits, setRelevantBenefits] = useState<Benefit[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [aiMode, setAiMode] = useState(() => {
+    // Restore AI mode preference
+    const saved = localStorage.getItem("vogo_ai_mode");
+    return saved === "true";
+  });
+
+  // Cache for instant toggle switching (persisted to localStorage)
+  const [cachedRuleBased, setCachedRuleBased] = useState<
+    Recommendation[] | null
+  >(() => {
+    const saved = localStorage.getItem("vogo_cache_rule");
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [cachedAI, setCachedAI] = useState<{
+    recs: Recommendation[];
+    benefits: Benefit[];
+  } | null>(() => {
+    const saved = localStorage.getItem("vogo_cache_ai");
+    return saved ? JSON.parse(saved) : null;
+  });
 
   useEffect(() => {
-    loadRecommendations()
-  }, [aiMode])
+    loadRecommendations();
+  }, [aiMode]);
 
   const loadRecommendations = async () => {
     try {
-      setLoading(true)
+      setLoading(true);
       if (aiMode) {
         // Check cache first
         if (cachedAI) {
-          setRecommendations(cachedAI.recs)
-          setRelevantBenefits(cachedAI.benefits)
-          setLoading(false)
-          return
+          setRecommendations(cachedAI.recs);
+          setRelevantBenefits(cachedAI.benefits);
+          setLoading(false);
+          return;
         }
         // Use LLM-powered recommendations
-        const data = await api.getLLMRecommendations({ user_id: CURRENT_USER_ID })
-        setRecommendations(data.recommendations)
-        setRelevantBenefits(data.relevant_benefits)
-        setCachedAI({ recs: data.recommendations, benefits: data.relevant_benefits })
+        const data = await api.getLLMRecommendations({
+          user_id: CURRENT_USER_ID,
+        });
+        setRecommendations(data.recommendations);
+        setRelevantBenefits(data.relevant_benefits);
+        const aiCache = {
+          recs: data.recommendations,
+          benefits: data.relevant_benefits,
+        };
+        setCachedAI(aiCache);
+        // Persist to localStorage
+        localStorage.setItem("vogo_cache_ai", JSON.stringify(aiCache));
       } else {
         // Check cache first
         if (cachedRuleBased) {
-          setRecommendations(cachedRuleBased)
-          setRelevantBenefits([])
-          setLoading(false)
-          return
+          setRecommendations(cachedRuleBased);
+          setRelevantBenefits([]);
+          setLoading(false);
+          return;
         }
         // Use rule-based recommendations
-        const data = await api.getRecommendations(CURRENT_USER_ID)
-        setRecommendations(data)
-        setRelevantBenefits([])
-        setCachedRuleBased(data)
+        const data = await api.getRecommendations(CURRENT_USER_ID);
+        setRecommendations(data);
+        setRelevantBenefits([]);
+        setCachedRuleBased(data);
+        // Persist to localStorage
+        localStorage.setItem("vogo_cache_rule", JSON.stringify(data));
       }
     } catch (error) {
-      console.error('Failed to load recommendations:', error)
+      console.error("Failed to load recommendations:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  if (loading) {
-    return (
-      <div className="px-4 py-6 sm:px-0">
-        <div className="flex justify-between items-start mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Recommendations
-            </h1>
-            <p className="text-gray-600">
-              Personalized tips to help you get the most from your memberships
-            </p>
-          </div>
-          <div className="flex items-center gap-3 bg-white px-4 py-3 rounded-lg shadow">
-            <span className={`text-sm font-medium ${!aiMode ? 'text-indigo-600' : 'text-gray-500'}`}>
-              Rule-based
-            </span>
-            <button
-              disabled
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors opacity-50 cursor-not-allowed ${
-                aiMode ? 'bg-indigo-600' : 'bg-gray-200'
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  aiMode ? 'translate-x-6' : 'translate-x-1'
-                }`}
-              />
-            </button>
-            <div className="flex items-center gap-1">
-              <span className={`text-sm font-medium ${aiMode ? 'text-indigo-600' : 'text-gray-500'}`}>
-                AI Mode
-              </span>
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
-                GPT-4o
-              </span>
-            </div>
-          </div>
-        </div>
-        <div className="flex flex-col justify-center items-center h-64 bg-white rounded-lg shadow">
-          {aiMode ? (
-            <>
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4"></div>
-              <p className="text-gray-700 font-medium">Analyzing with GPT-4o...</p>
-              <p className="text-gray-500 text-sm mt-2">This may take a few seconds</p>
-            </>
-          ) : (
-            <>
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-600 mb-4"></div>
-              <p className="text-gray-500">Loading recommendations...</p>
-            </>
-          )}
-        </div>
-      </div>
-    )
-  }
+  // Save AI mode preference when it changes
+  useEffect(() => {
+    localStorage.setItem("vogo_ai_mode", String(aiMode));
+  }, [aiMode]);
 
   return (
-    <div className="px-4 py-6 sm:px-0">
-      <div className="flex justify-between items-start mb-8">
+    <div className="space-y-6 animate-fade-in">
+      {/* Header with Mode Toggle */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-4xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">
             Recommendations
           </h1>
-          <p className="text-gray-600">
-            Personalized tips to help you get the most from your memberships
+          <p className="text-zinc-600 dark:text-zinc-400">
+            Personalized insights to maximize your benefits
           </p>
         </div>
-        
-        {/* AI Mode Toggle */}
-        <div className="flex items-center gap-3 bg-white px-4 py-3 rounded-lg shadow">
-          <span className={`text-sm font-medium ${!aiMode ? 'text-indigo-600' : 'text-gray-500'}`}>
-            Rule-based
-          </span>
-          <button
-            onClick={() => setAiMode(!aiMode)}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
-              aiMode ? 'bg-indigo-600' : 'bg-gray-200'
+
+        {/* Mode Toggle */}
+        <Card className="p-4 flex items-center gap-4">
+          <span
+            className={`text-sm font-medium transition-colors ${
+              !aiMode ? "text-primary" : "text-zinc-500 dark:text-zinc-400"
             }`}
           >
+            Rule-based
+          </span>
+          <Switch checked={aiMode} onChange={setAiMode} disabled={loading} />
+          <div className="flex items-center gap-2">
             <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                aiMode ? 'translate-x-6' : 'translate-x-1'
+              className={`text-sm font-medium transition-colors ${
+                aiMode ? "text-primary" : "text-zinc-500 dark:text-zinc-400"
               }`}
-            />
-          </button>
-          <div className="flex items-center gap-1">
-            <span className={`text-sm font-medium ${aiMode ? 'text-indigo-600' : 'text-gray-500'}`}>
+            >
               AI Mode
             </span>
-            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+            <Badge variant="default" className="gap-1">
+              <Sparkles className="w-3 h-3" />
               GPT-4o
-            </span>
+            </Badge>
           </div>
-        </div>
+        </Card>
       </div>
 
-      {recommendations.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-lg shadow">
-          <p className="text-gray-500 mb-4">
-            No recommendations available yet.
-          </p>
-          <a
-            href="/memberships"
-            className="text-indigo-600 hover:text-indigo-500"
-          >
-            Add memberships to get personalized recommendations →
-          </a>
+      {/* Loading State */}
+      {loading ? (
+        <div className="space-y-4">
+          {aiMode && (
+            <Card className="p-8 text-center">
+              <Loader2 className="w-12 h-12 text-primary mx-auto mb-4 animate-spin" />
+              <p className="font-medium text-zinc-900 dark:text-zinc-100">
+                Analyzing with GPT-4o...
+              </p>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
+                This may take a few seconds
+              </p>
+            </Card>
+          )}
+          <div className="space-y-4">
+            {[...Array(3)].map((_, i) => (
+              <Skeleton key={i} className="h-48" />
+            ))}
+          </div>
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            {recommendations.map((rec, index) => {
-              const kindColors = {
-                overlap: 'bg-yellow-50 border-yellow-200',
-                unused: 'bg-blue-50 border-blue-200',
-                switch: 'bg-purple-50 border-purple-200',
-                bundle: 'bg-green-50 border-green-200',
-                tip: 'bg-indigo-50 border-indigo-200'
-              }
-              
-              const kindIcons = {
-                overlap: '⚠️',
-                unused: '💡',
-                switch: '🔄',
-                bundle: '📦',
-                tip: '✨'
-              }
-              
-              return (
-                <div
-                  key={index}
-                  className={`bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition-shadow border ${
-                    aiMode && rec.kind ? kindColors[rec.kind as keyof typeof kindColors] : ''
-                  }`}
+          {/* Empty State */}
+          {recommendations.length === 0 ? (
+            <Card className="p-12 text-center">
+              <Lightbulb className="w-16 h-16 text-zinc-400 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
+                No recommendations yet
+              </h3>
+              <p className="text-zinc-600 dark:text-zinc-400 mb-6">
+                Add memberships to receive personalized recommendations
+              </p>
+              <Link to="/memberships">
+                <Button className="gap-2">
+                  <Plus className="w-5 h-5" />
+                  Add Memberships
+                </Button>
+              </Link>
+            </Card>
+          ) : (
+            <>
+              {/* Recommendations List */}
+              <div className="space-y-4">
+                {recommendations.map((rec, index) => (
+                  <RecommendationCard
+                    key={index}
+                    recommendation={rec}
+                    delay={index * 50}
+                  />
+                ))}
+              </div>
+
+              {/* Relevant Benefits Section (AI Mode) */}
+              {aiMode && relevantBenefits.length > 0 && (
+                <Card
+                  className="p-6 animate-fade-in"
+                  style={{ animationDelay: "300ms" }}
                 >
-                  <div className="p-6">
-                    <div className="flex items-start">
-                      <div className="flex-shrink-0">
-                        <span className="text-2xl">
-                          {aiMode && rec.kind ? kindIcons[rec.kind as keyof typeof kindIcons] : '⭐'}
-                        </span>
-                      </div>
-                      <div className="ml-4 flex-1">
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-lg font-medium text-gray-900">
-                            {rec.title}
-                          </h3>
-                          {aiMode && rec.kind && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
-                              {rec.kind}
-                            </span>
-                          )}
-                        </div>
-                        <p className="mt-2 text-sm text-gray-600">
-                          {rec.rationale}
-                        </p>
-                        <div className="mt-4 flex items-center justify-between">
-                          <div className="space-y-1">
-                            {(rec.estimated_saving || (rec.estimated_saving_min && rec.estimated_saving_max)) && (
-                              <p className="text-sm font-medium text-green-600">
-                                💰 {rec.estimated_saving || 
-                                  (rec.estimated_saving_min && rec.estimated_saving_max 
-                                    ? `£${(rec.estimated_saving_min / 100).toFixed(0)}-${(rec.estimated_saving_max / 100).toFixed(0)}/year`
-                                    : 'Savings available')}
-                              </p>
-                            )}
-                            {(rec.membership || rec.membership_slug) && (
-                              <p className="text-xs text-gray-500">
-                                via {rec.membership || rec.membership_slug}
-                              </p>
-                            )}
-                          </div>
-                          {rec.action_url && (
-                            <a
-                              href={rec.action_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
-                            >
-                              Take Action
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-          
-          {/* Relevant Benefits Section (AI Mode Only) */}
-          {aiMode && relevantBenefits.length > 0 && (
-            <div className="mt-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                Relevant Benefits for You
-              </h2>
-              <div className="bg-white shadow rounded-lg divide-y divide-gray-200">
-                {relevantBenefits.map((benefit) => (
-                  <div key={benefit.id} className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="text-base font-medium text-gray-900">
+                  <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
+                    Relevant Benefits
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {relevantBenefits.slice(0, 6).map((benefit, index) => (
+                      <div
+                        key={benefit.id}
+                        className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                      >
+                        <h4 className="font-medium text-sm text-zinc-900 dark:text-zinc-100 mb-1">
                           {benefit.title}
-                        </h3>
+                        </h4>
                         {benefit.description && (
-                          <p className="text-sm text-gray-600 mt-1">
+                          <p className="text-xs text-zinc-600 dark:text-zinc-400 line-clamp-2">
                             {benefit.description}
                           </p>
                         )}
-                        <div className="mt-2 flex gap-2">
-                          {benefit.category && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800">
-                              {benefit.category.replace('_', ' ')}
-                            </span>
-                          )}
-                          {benefit.vendor_domain && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
-                              {benefit.vendor_domain}
-                            </span>
-                          )}
-                        </div>
                       </div>
-                      {benefit.source_url && (
-                        <a
-                          href={benefit.source_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="ml-4 text-sm text-indigo-600 hover:text-indigo-500"
-                        >
-                          Learn More →
-                        </a>
-                      )}
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
+                </Card>
+              )}
+            </>
           )}
         </>
       )}
     </div>
-  )
+  );
 }
-
