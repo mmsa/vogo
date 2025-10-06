@@ -235,7 +235,10 @@ jobs:
           
           # Force remove ALL containers (including stopped ones with name conflicts)
           echo "🧹 Force removing all containers..."
-          docker rm -f \$(docker ps -aq) 2>/dev/null || true
+          CONTAINERS=$(docker ps -aq)
+          if [ -n "$CONTAINERS" ]; then
+            docker rm -f $CONTAINERS || true
+          fi
           
           # Clean up old images, networks, and volumes
           echo "🧹 Cleaning up Docker resources..."
