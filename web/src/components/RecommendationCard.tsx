@@ -1,8 +1,16 @@
-import { Star, ArrowUpRight, Info } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Star, ArrowUpRight, Info, ExternalLink } from "lucide-react";
 import { Card } from "./ui/Card";
 import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
-import { Recommendation } from "@/lib/api";
+import {
+  Dialog,
+  DialogHeader,
+  DialogTitle,
+  DialogContent,
+  DialogClose,
+} from "./ui/Dialog";
+import { Recommendation, Benefit, api } from "@/lib/api";
 import { formatSavingRange } from "@/lib/utils";
 
 interface RecommendationCardProps {
@@ -14,10 +22,39 @@ export function RecommendationCard({
   recommendation,
   delay = 0,
 }: RecommendationCardProps) {
+  const [showDetails, setShowDetails] = useState(false);
+  const [benefits, setBenefits] = useState<Benefit[]>([]);
+  const [loadingBenefits, setLoadingBenefits] = useState(false);
+
   const savingText = formatSavingRange(
     recommendation.estimated_saving_min,
     recommendation.estimated_saving_max
   );
+
+  // Load benefit details when dialog opens
+  useEffect(() => {
+    if (showDetails && !benefits.length) {
+      loadBenefitDetails();
+    }
+  }, [showDetails]);
+
+  const loadBenefitDetails = async () => {
+    try {
+      setLoadingBenefits(true);
+      const benefitIds =
+        recommendation.benefit_match_ids ||
+        (recommendation.benefit_id ? [recommendation.benefit_id] : []);
+
+      if (benefitIds.length > 0) {
+        const fetchedBenefits = await api.getBenefits(benefitIds);
+        setBenefits(fetchedBenefits);
+      }
+    } catch (error) {
+      console.error("Failed to load benefit details:", error);
+    } finally {
+      setLoadingBenefits(false);
+    }
+  };
 
   // Determine icon and color based on recommendation kind
   const getKindConfig = (kind?: string) => {
@@ -110,12 +147,23 @@ export function RecommendationCard({
             </div>
 
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" className="gap-1 text-xs">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1 text-xs"
+                onClick={() => setShowDetails(true)}
+              >
                 <Info className="w-3 h-3" />
                 Details
               </Button>
               {recommendation.action_url ? (
-                <Button size="sm" className="gap-1 text-xs font-semibold">
+                <Button
+                  size="sm"
+                  className="gap-1 text-xs font-semibold"
+                  onClick={() =>
+                    window.open(recommendation.action_url, "_blank")
+                  }
+                >
                   Take Action
                   <ArrowUpRight className="w-3 h-3" />
                 </Button>
@@ -128,6 +176,99 @@ export function RecommendationCard({
           </div>
         </div>
       </div>
+
+      {/* Details Dialog */}
+      <Dialog open={showDetails} onOpenChange={setShowDetails}>
+        <DialogHeader className="border-b border-zinc-200 dark:border-zinc-800">
+          <DialogTitle>{recommendation.title}</DialogTitle>
+          <DialogClose onClose={() => setShowDetails(false)} />
+        </DialogHeader>
+
+        <DialogContent>
+          {/* Saving Info */}
+          {savingText && (
+            <div className="mb-6 p-4 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+              <div className="font-bold text-green-700 dark:text-green-400 mb-1">
+                💰 Potential Savings
+              </div>
+              <div className="text-2xl font-bold text-green-900 dark:text-green-300">
+                {savingText}
+              </div>
+            </div>
+          )}
+
+          {/* Rationale */}
+          <div className="mb-6">
+            <h4 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
+              Why this recommendation?
+            </h4>
+            <p className="text-zinc-700 dark:text-zinc-300 leading-relaxed">
+              {recommendation.rationale}
+            </p>
+          </div>
+
+          {/* Related Benefits */}
+          {benefits.length > 0 && (
+            <div className="mb-4">
+              <h4 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-3">
+                Related Benefits
+              </h4>
+              <div className="space-y-3">
+                {benefits.map((benefit) => (
+                  <div
+                    key={benefit.id}
+                    className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700"
+                  >
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <h5 className="font-medium text-zinc-900 dark:text-zinc-100">
+                        {benefit.title}
+                      </h5>
+                      {benefit.category && (
+                        <Badge variant="secondary" className="text-xs shrink-0">
+                          {benefit.category}
+                        </Badge>
+                      )}
+                    </div>
+                    {benefit.description && (
+                      <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-3">
+                        {benefit.description}
+                      </p>
+                    )}
+                    {benefit.source_url && (
+                      <a
+                        href={benefit.source_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                      >
+                        Learn more
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {loadingBenefits && (
+            <div className="text-center text-zinc-500 dark:text-zinc-400 py-4">
+              Loading benefit details...
+            </div>
+          )}
+
+          {/* Action Button */}
+          {recommendation.action_url && (
+            <Button
+              className="w-full gap-2"
+              onClick={() => window.open(recommendation.action_url, "_blank")}
+            >
+              Take Action
+              <ArrowUpRight className="w-4 h-4" />
+            </Button>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

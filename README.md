@@ -1,13 +1,28 @@
-# Vogo - Membership Benefits Tracker
+# VogPlus.ai
 
-A comprehensive membership benefits tracking platform that helps users discover, manage, and optimize their membership perks and subscriptions.
+**Intelligence for your benefits.**
+
+A comprehensive membership benefits tracking platform that helps users discover, manage, and optimize their membership perks and subscriptions using AI-powered recommendations.
 
 ## 📋 Overview
 
-Vogo is a monorepo application consisting of:
-- **Backend**: FastAPI + PostgreSQL + SQLAlchemy + OpenAI embeddings
+VogPlus.ai is a monorepo application consisting of:
+- **Backend**: FastAPI + PostgreSQL + SQLAlchemy + OpenAI embeddings + JWT Auth
 - **Web**: React + Vite + TypeScript + Tailwind CSS
 - **Database**: PostgreSQL 16 with Alembic migrations
+
+## 🔐 NEW: User Management & Authentication
+
+**Backend authentication is complete!** VogPlus.ai now supports:
+- ✅ Email/password registration and login
+- ✅ JWT access + refresh tokens
+- ✅ Role-based access control (user/admin)
+- ✅ Admin user management API
+- ✅ Session management with token refresh rotation
+
+**Quick Start:** See [`AUTH_QUICK_START.md`](AUTH_QUICK_START.md) for testing endpoints  
+**Full Details:** See [`AUTH_IMPLEMENTATION_COMPLETE.md`](AUTH_IMPLEMENTATION_COMPLETE.md)  
+**Frontend TODO:** Auth UI still needs to be built (see todos below)
 
 ## 🚀 Quickstart
 

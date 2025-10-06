@@ -1,3 +1,12 @@
+# Environment Variables
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+.env.test
+*.env
+
 # Python
 __pycache__/
 *.py[cod]
@@ -20,23 +29,75 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
+*.manifest
+*.spec
 
-# Virtual environments
+# Virtual Environments
+.venv/
 venv/
-env/
 ENV/
-env.bak/
-venv.bak/
-venv
+env/
+.virtualenv/
+pip-log.txt
+pip-delete-this-directory.txt
 
-# IDE
+# Python Testing
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache
+
+# Python IDE
+.pytype/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Node Testing
+coverage/
+
+# Node Build
+dist/
+dist-ssr/
+*.local
+
+# Vite
+.vite/
+
+# IDEs and Editors
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+.DS_Store
+.AppleDouble
+.LSOverride
+*.sublime-project
+*.sublime-workspace
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+.vs/
 
-# OS
+# OS Files
 .DS_Store
 .DS_Store?
 ._*
@@ -44,74 +105,117 @@ venv
 .Trashes
 ehthumbs.db
 Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
 
-# Node.js
-node_modules/
+# Logs
+*.log
+logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.npm
-.yarn-integrity
-
-# Environment variables
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+lerna-debug.log*
+.pnpm-debug.log*
+backend.log
+*.log.*
 
 # Database
-*.db
 *.sqlite
 *.sqlite3
+*.db
+*.db-journal
 
-# Logs
-logs/
-*.log
+# Docker
+.docker/
 
-# Coverage reports
-htmlcov/
-.coverage
-.coverage.*
-coverage.xml
-*.cover
-.hypothesis/
-.pytest_cache/
+# Database dumps
+*.sql
+*.dump
+backup_*.sql
 
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+
+# Build artifacts
+*.pyc
+*.pyo
+*.egg
+*.egg-info/
+dist/
+build/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+
+# Compiled files
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+
+# Packages
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# IDEs
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Alembic
+alembic/versions/__pycache__/
 
 # Jupyter Notebook
 .ipynb_checkpoints
+*.ipynb
 
-# pyenv
-.python-version
+# Certificates
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
 
-# pipenv
-Pipfile.lock
+# SSH keys
+id_rsa
+id_rsa.pub
+*.pem
 
-# PEP 582
-__pypackages__/
+# Secrets
+secrets/
+*.secret
+*.secrets
 
-# Celery
-celerybeat-schedule
-celerybeat.pid
+# Cache
+.cache/
+*.cache
 
-# SageMath parsed files
-*.sage.py
-
-# Spyder project settings
-.spyderproject
-.spyproject
-
-# Rope project settings
-.ropeproject
-
-# mkdocs documentation
-/site
-
-# Temporary files
-*.tmp
-*.temp
+# Misc
+.~lock.*
+.directory
+*.sw?
