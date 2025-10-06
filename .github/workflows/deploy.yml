@@ -233,12 +233,15 @@ jobs:
           echo "🛑 Stopping existing containers..."
           $DOCKER_COMPOSE_CMD -f docker-compose.prod.yml down --remove-orphans --volumes || true
           
-          # Kill any remaining containers
-          docker ps -q | xargs -r docker kill || true
+          # Force remove ALL containers (including stopped ones with name conflicts)
+          echo "🧹 Force removing all containers..."
+          docker rm -f \$(docker ps -aq) 2>/dev/null || true
           
-          # Clean up old images and containers
-          echo "🧹 Cleaning up old images..."
+          # Clean up old images, networks, and volumes
+          echo "🧹 Cleaning up Docker resources..."
           docker system prune -af --volumes || true
+          docker network prune -f || true
+          docker volume prune -f || true
           
           # Pull latest base images
           echo "📥 Pulling latest base images..."
