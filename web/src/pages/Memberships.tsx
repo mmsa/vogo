@@ -1,6 +1,14 @@
 import { useState, useEffect, useMemo } from "react";
-import { Plus, Search, Filter } from "lucide-react";
-import { api, CURRENT_USER_ID, Membership, Benefit, SmartAddOut } from "@/lib/api";
+import { Plus, Search, Filter, Sparkles, AlertCircle, CheckCircle } from "lucide-react";
+import { 
+  api, 
+  CURRENT_USER_ID, 
+  Membership, 
+  Benefit, 
+  SmartAddOut,
+  ValidateMembershipResponse,
+  DiscoverMembershipResponse 
+} from "@/lib/api";
 import { SectionHeader } from "@/components/SectionHeader";
 import { MembershipCard } from "@/components/MembershipCard";
 import { Button } from "@/components/ui/Button";
@@ -44,6 +52,15 @@ export default function Memberships() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
   const [showAddedOnly, setShowAddedOnly] = useState(false);
+  
+  // New membership creation state
+  const [showCreateMode, setShowCreateMode] = useState(false);
+  const [newMembershipName, setNewMembershipName] = useState("");
+  const [validating, setValidating] = useState(false);
+  const [validationResult, setValidationResult] = useState<ValidateMembershipResponse | null>(null);
+  const [discovering, setDiscovering] = useState(false);
+  const [discoveryResult, setDiscoveryResult] = useState<DiscoverMembershipResponse | null>(null);
+  const [modalSearchTerm, setModalSearchTerm] = useState("");
 
   useEffect(() => {
     loadData();
@@ -158,6 +175,84 @@ export default function Memberships() {
     } finally {
       setRemovingMembership(null);
     }
+  };
+
+  // New membership validation and discovery
+  const handleValidateMembership = async () => {
+    if (!newMembershipName.trim()) return;
+    
+    try {
+      setValidating(true);
+      setValidationResult(null);
+      setDiscoveryResult(null);
+      
+      const result = await api.validateMembershipName({
+        user_id: CURRENT_USER_ID,
+        name: newMembershipName.trim()
+      });
+      
+      setValidationResult(result);
+      
+      // If it exists, suggest adding it directly
+      if (result.status === "exists" && result.existing_membership) {
+        // Auto-select the existing membership
+        if (!userMembershipIds.includes(result.existing_membership.id)) {
+          setSelectedMemberships([result.existing_membership.id]);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to validate membership:", error);
+      setValidationResult({
+        status: "invalid",
+        confidence: 0,
+        reason: "Failed to validate. Please try again.",
+        suggestions: []
+      });
+    } finally {
+      setValidating(false);
+    }
+  };
+
+  const handleDiscoverMembership = async () => {
+    if (!validationResult || validationResult.status === "invalid") return;
+    
+    const nameToUse = validationResult.normalized_name || newMembershipName.trim();
+    
+    try {
+      setDiscovering(true);
+      
+      const result = await api.discoverMembership({
+        user_id: CURRENT_USER_ID,
+        name: nameToUse
+      });
+      
+      setDiscoveryResult(result);
+      
+      // Reload memberships to include the newly discovered one
+      await loadData();
+      
+      // Auto-select it if not already added
+      if (!userMembershipIds.includes(result.membership.id)) {
+        setSelectedMemberships([result.membership.id]);
+      }
+    } catch (error) {
+      console.error("Failed to discover membership:", error);
+    } finally {
+      setDiscovering(false);
+    }
+  };
+
+  const handleCancelCreateMode = () => {
+    setShowCreateMode(false);
+    setNewMembershipName("");
+    setValidationResult(null);
+    setDiscoveryResult(null);
+  };
+
+  const handleUseSuggestion = (suggestion: string) => {
+    setNewMembershipName(suggestion);
+    setValidationResult(null);
+    setDiscoveryResult(null);
   };
 
   // Filter memberships
@@ -360,11 +455,186 @@ export default function Memberships() {
         <DialogHeader>
           <DialogTitle>Add Memberships</DialogTitle>
           <DialogDescription>
-            Select memberships to add to your account
+            {showCreateMode 
+              ? "Discover a new membership with AI" 
+              : "Select from catalog or create new"}
           </DialogDescription>
         </DialogHeader>
 
-        <DialogContent className="max-h-[60vh]">
+        <DialogContent className="max-h-[70vh]">
+          {!showCreateMode ? (
+            <>
+              {/* Search Bar */}
+              <div className="mb-4 relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                <Input
+                  placeholder="Search memberships..."
+                  value={modalSearchTerm}
+                  onChange={(e) => setModalSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+
+              {/* Create New Button */}
+              <Button
+                variant="outline"
+                className="w-full mb-4 gap-2 border-dashed"
+                onClick={() => setShowCreateMode(true)}
+              >
+                <Sparkles className="w-4 h-4" />
+                Can't find it? Create new membership with AI
+              </Button>
+            </>
+          ) : (
+            <>
+              {/* Create Mode - Validation Flow */}
+              <div className="space-y-4">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="e.g. Revolut Premium, Amex Platinum..."
+                    value={newMembershipName}
+                    onChange={(e) => setNewMembershipName(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === "Enter" && !validating && !validationResult) {
+                        handleValidateMembership();
+                      }
+                    }}
+                    className="flex-1"
+                    autoFocus
+                  />
+                  {!validationResult && (
+                    <Button
+                      onClick={handleValidateMembership}
+                      disabled={validating || !newMembershipName.trim()}
+                      size="sm"
+                    >
+                      {validating ? "Validating..." : "Validate"}
+                    </Button>
+                  )}
+                </div>
+
+                {/* Validation Result */}
+                {validationResult && (
+                  <Alert
+                    variant={
+                      validationResult.status === "valid" || validationResult.status === "exists"
+                        ? "success"
+                        : validationResult.status === "ambiguous"
+                        ? "warning"
+                        : "error"
+                    }
+                    className="animate-scale-in"
+                  >
+                    <div className="flex items-start gap-2">
+                      {validationResult.status === "valid" || validationResult.status === "exists" ? (
+                        <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                      ) : (
+                        <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                      )}
+                      <div className="flex-1">
+                        <AlertTitle>
+                          {validationResult.status === "exists"
+                            ? "Already in Catalog"
+                            : validationResult.status === "valid"
+                            ? "Membership Validated"
+                            : validationResult.status === "ambiguous"
+                            ? "Please Be More Specific"
+                            : "Invalid Membership"}
+                        </AlertTitle>
+                        <AlertDescription>
+                          <p className="text-sm mb-2">{validationResult.reason}</p>
+                          
+                          {validationResult.normalized_name && validationResult.status !== "exists" && (
+                            <p className="text-sm font-medium mb-2">
+                              Normalized: {validationResult.normalized_name}
+                            </p>
+                          )}
+                          
+                          {validationResult.suggestions && validationResult.suggestions.length > 0 && (
+                            <div className="mt-2">
+                              <p className="text-xs font-medium mb-1">Suggestions:</p>
+                              <div className="flex flex-wrap gap-1">
+                                {validationResult.suggestions.map((suggestion, idx) => (
+                                  <Button
+                                    key={idx}
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-xs"
+                                    onClick={() => handleUseSuggestion(suggestion)}
+                                  >
+                                    {suggestion}
+                                  </Button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {validationResult.status === "valid" && !discoveryResult && (
+                            <Button
+                              className="mt-3 gap-2"
+                              onClick={handleDiscoverMembership}
+                              disabled={discovering}
+                            >
+                              <Sparkles className="w-4 h-4" />
+                              {discovering ? "Discovering benefits..." : "Discover Benefits with AI"}
+                            </Button>
+                          )}
+                          
+                          {validationResult.status === "exists" && validationResult.existing_membership && (
+                            <div className="mt-3 text-xs">
+                              This membership is already in our catalog. It will be auto-selected when you close this.
+                            </div>
+                          )}
+                        </AlertDescription>
+                      </div>
+                    </div>
+                  </Alert>
+                )}
+
+                {/* Discovery Result */}
+                {discoveryResult && (
+                  <Alert variant="success" className="animate-scale-in">
+                    <CheckCircle className="w-5 h-5" />
+                    <AlertTitle>Benefits Discovered!</AlertTitle>
+                    <AlertDescription>
+                      <p className="text-sm mb-2">
+                        Found {discoveryResult.benefits_preview.length} benefits for{" "}
+                        <strong>{discoveryResult.membership.name}</strong>
+                      </p>
+                      <div className="text-xs space-y-1 max-h-32 overflow-y-auto">
+                        {discoveryResult.benefits_preview.slice(0, 5).map((benefit, idx) => (
+                          <div key={idx} className="flex items-start gap-1">
+                            <span className="text-green-600">✓</span>
+                            <span>{benefit.title}</span>
+                          </div>
+                        ))}
+                        {discoveryResult.benefits_preview.length > 5 && (
+                          <div className="text-zinc-500">
+                            ...and {discoveryResult.benefits_preview.length - 5} more
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-xs mt-2 text-zinc-500">
+                        Membership has been added to the list below. Select it to add to your account.
+                      </p>
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCancelCreateMode}
+                  className="w-full"
+                >
+                  Back to Catalog
+                </Button>
+              </div>
+            </>
+          )}
+          
+          {!showCreateMode && (
+            <>
           {/* Smart Check Warning */}
           {smartCheck && smartCheck.decision !== "add" && (
             <Alert
@@ -407,8 +677,29 @@ export default function Memberships() {
           )}
 
           {/* Membership List */}
-          <div className="space-y-2">
-            {memberships.map((membership) => (
+          <div className="space-y-3">
+            {Object.entries(
+              memberships
+                .filter((m) => 
+                  modalSearchTerm === "" ||
+                  m.name.toLowerCase().includes(modalSearchTerm.toLowerCase()) ||
+                  (m.provider_name && m.provider_name.toLowerCase().includes(modalSearchTerm.toLowerCase())) ||
+                  (m.plan_name && m.plan_name.toLowerCase().includes(modalSearchTerm.toLowerCase()))
+                )
+                .reduce((acc, m) => {
+                  const provider = m.provider_name || m.name.split(' ')[0];
+                  if (!acc[provider]) acc[provider] = [];
+                  acc[provider].push(m);
+                  return acc;
+                }, {} as Record<string, typeof memberships>)
+            ).map(([provider, providerMemberships]) => (
+              <div key={provider} className="space-y-1">
+                {providerMemberships.length > 1 && (
+                  <div className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 px-2">
+                    {provider}
+                  </div>
+                )}
+                {providerMemberships.map((membership) => (
               <div
                 key={membership.id}
                 onClick={() => toggleMembership(membership.id)}
@@ -436,17 +727,30 @@ export default function Memberships() {
                     </svg>
                   )}
                 </div>
-                <span className="flex-1 text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                  {membership.name}
-                </span>
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                    {membership.provider_name && membership.plan_name ? (
+                      <>
+                        <span className="text-zinc-500 dark:text-zinc-400">{membership.provider_name}</span>
+                        {" "}<span>{membership.plan_name}</span>
+                      </>
+                    ) : (
+                      membership.name
+                    )}
+                  </div>
+                </div>
                 {checkingMembership === membership.id && (
                   <Badge variant="secondary" className="text-xs">
                     Checking...
                   </Badge>
                 )}
               </div>
+                ))}
+              </div>
             ))}
           </div>
+            </>
+          )}
         </DialogContent>
 
         <DialogFooter>

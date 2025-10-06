@@ -96,6 +96,58 @@ export interface SmartAddOut {
   impacted_benefits: Benefit[];
 }
 
+export interface DiscoverMembershipRequest {
+  user_id: number;
+  name: string;
+}
+
+export interface BenefitPreview {
+  id?: number;
+  title: string;
+  description?: string;
+  category?: string;
+  vendor_domain?: string;
+  source_url?: string;
+  validation_status?: string;
+}
+
+export interface MembershipPreview {
+  id: number;
+  name: string;
+  provider_slug: string;
+  provider_name?: string;
+  plan_name?: string;
+  status: string;
+  is_catalog: boolean;
+}
+
+export interface DiscoverMembershipResponse {
+  membership: MembershipPreview;
+  benefits_preview: BenefitPreview[];
+}
+
+export interface ValidateMembershipRequest {
+  user_id: number;
+  name: string;
+}
+
+export interface ValidateMembershipResponse {
+  status: "valid" | "invalid" | "ambiguous" | "exists";
+  normalized_name?: string;
+  provider?: string;
+  plan?: string;
+  confidence: number;
+  reason: string;
+  suggestions: string[];
+  existing_membership?: {
+    id: number;
+    name: string;
+    provider_slug: string;
+    is_catalog: boolean;
+    status: string;
+  };
+}
+
 class ApiClient {
   private baseUrl: string;
 
@@ -286,6 +338,32 @@ class ApiClient {
     const params = new URLSearchParams();
     benefitIds.forEach((id) => params.append("ids", id.toString()));
     return this.request<Benefit[]>(`/api/benefits?${params}`);
+  }
+
+  // Validate membership name before discovery
+  async validateMembershipName(
+    payload: ValidateMembershipRequest
+  ): Promise<ValidateMembershipResponse> {
+    return this.request<ValidateMembershipResponse>(
+      "/api/memberships/validate-name",
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }
+    );
+  }
+
+  // Discover a new membership
+  async discoverMembership(
+    payload: DiscoverMembershipRequest
+  ): Promise<DiscoverMembershipResponse> {
+    return this.request<DiscoverMembershipResponse>(
+      "/api/memberships/discover",
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }
+    );
   }
 }
 

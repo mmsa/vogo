@@ -1,8 +1,68 @@
 {
   "memberships": [
     {
+      "name": "Amazon Prime",
+      "provider_slug": "amazon-prime",
+      "provider_name": "Amazon",
+      "plan_name": "Prime",
+      "benefits": [
+        {
+          "title": "Free Delivery",
+          "description": "Unlimited free one-day delivery on millions of items",
+          "vendor_domain": "amazon.co.uk",
+          "category": "retail",
+          "source_url": "https://www.amazon.co.uk/prime"
+        },
+        {
+          "title": "Prime Video",
+          "description": "Unlimited streaming of movies and TV shows",
+          "vendor_domain": "primevideo.com",
+          "category": "entertainment",
+          "source_url": "https://www.amazon.co.uk/prime"
+        },
+        {
+          "title": "Prime Music",
+          "description": "Access to 2 million songs ad-free",
+          "vendor_domain": "music.amazon.co.uk",
+          "category": "entertainment",
+          "source_url": "https://www.amazon.co.uk/prime"
+        },
+        {
+          "title": "Amazon Photos",
+          "description": "Unlimited photo storage in the cloud",
+          "vendor_domain": "amazon.co.uk",
+          "category": "other",
+          "source_url": "https://www.amazon.co.uk/prime"
+        }
+      ]
+    },
+    {
+      "name": "Revolut Standard",
+      "provider_slug": "revolut-standard",
+      "provider_name": "Revolut",
+      "plan_name": "Standard",
+      "benefits": [
+        {
+          "title": "Fee-Free Spending Abroad",
+          "description": "Spend in 150+ currencies with no fees up to £1,000/month",
+          "vendor_domain": "revolut.com",
+          "category": "banking",
+          "source_url": "https://www.revolut.com/en-GB/standard"
+        },
+        {
+          "title": "Instant Notifications",
+          "description": "Real-time notifications for all transactions",
+          "vendor_domain": "revolut.com",
+          "category": "banking",
+          "source_url": "https://www.revolut.com/en-GB/standard"
+        }
+      ]
+    },
+    {
       "name": "Revolut Premium",
       "provider_slug": "revolut-premium",
+      "provider_name": "Revolut",
+      "plan_name": "Premium",
       "benefits": [
         {
           "title": "Airport Lounge Access",
@@ -42,8 +102,96 @@
       ]
     },
     {
+      "name": "Revolut Metal",
+      "provider_slug": "revolut-metal",
+      "provider_name": "Revolut",
+      "plan_name": "Metal",
+      "benefits": [
+        {
+          "title": "Airport Lounge Access",
+          "description": "Access to 1,000+ airport lounges worldwide with LoungeKey",
+          "vendor_domain": "loungekey.com",
+          "category": "lounge_access",
+          "source_url": "https://www.revolut.com/en-GB/metal"
+        },
+        {
+          "title": "Comprehensive Travel Insurance",
+          "description": "Enhanced worldwide travel insurance for trips up to 90 days",
+          "vendor_domain": "allianz-assistance.co.uk",
+          "category": "travel_insurance",
+          "source_url": "https://www.revolut.com/en-GB/metal"
+        },
+        {
+          "title": "Metal Card",
+          "description": "Premium metal card with custom design options",
+          "vendor_domain": "revolut.com",
+          "category": "banking",
+          "source_url": "https://www.revolut.com/en-GB/metal"
+        },
+        {
+          "title": "1% Cashback",
+          "description": "1% cashback on all card purchases in Europe, 0.1% outside Europe",
+          "vendor_domain": "revolut.com",
+          "category": "cashback",
+          "source_url": "https://www.revolut.com/en-GB/metal"
+        },
+        {
+          "title": "Free ATM Withdrawals",
+          "description": "Unlimited fee-free ATM withdrawals worldwide",
+          "vendor_domain": "revolut.com",
+          "category": "banking",
+          "source_url": "https://www.revolut.com/en-GB/metal"
+        }
+      ]
+    },
+    {
+      "name": "Revolut Ultra",
+      "provider_slug": "revolut-ultra",
+      "provider_name": "Revolut",
+      "plan_name": "Ultra",
+      "benefits": [
+        {
+          "title": "Premium Airport Lounge Access",
+          "description": "Unlimited lounge access with guest passes via LoungeKey",
+          "vendor_domain": "loungekey.com",
+          "category": "lounge_access",
+          "source_url": "https://www.revolut.com/en-GB/ultra"
+        },
+        {
+          "title": "Exclusive Travel Insurance",
+          "description": "Premium worldwide travel insurance with winter sports cover",
+          "vendor_domain": "allianz-assistance.co.uk",
+          "category": "travel_insurance",
+          "source_url": "https://www.revolut.com/en-GB/ultra"
+        },
+        {
+          "title": "2% Cashback",
+          "description": "2% cashback on all card purchases worldwide",
+          "vendor_domain": "revolut.com",
+          "category": "cashback",
+          "source_url": "https://www.revolut.com/en-GB/ultra"
+        },
+        {
+          "title": "Personal Assistant",
+          "description": "24/7 concierge service for travel and lifestyle bookings",
+          "vendor_domain": "revolut.com",
+          "category": "other",
+          "source_url": "https://www.revolut.com/en-GB/ultra"
+        },
+        {
+          "title": "Device & Purchase Insurance",
+          "description": "Comprehensive phone insurance and purchase protection",
+          "vendor_domain": "revolut.com",
+          "category": "device_insurance",
+          "source_url": "https://www.revolut.com/en-GB/ultra"
+        }
+      ]
+    },
+    {
       "name": "Lloyds Platinum Account",
       "provider_slug": "lloyds-platinum",
+      "provider_name": "Lloyds",
+      "plan_name": "Platinum",
       "benefits": [
         {
           "title": "Worldwide Travel Insurance",
