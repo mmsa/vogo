@@ -229,14 +229,27 @@ jobs:
           # Deploy with Docker Compose
           echo "🐳 Deploying with Docker Compose..."
           
-          # Stop existing containers
-          $DOCKER_COMPOSE_CMD -f docker-compose.prod.yml down --remove-orphans || true
+          # Stop existing containers completely
+          echo "🛑 Stopping existing containers..."
+          $DOCKER_COMPOSE_CMD -f docker-compose.prod.yml down --remove-orphans --volumes || true
           
-          # Clean up old images
-          docker system prune -f || true
+          # Kill any remaining containers
+          docker ps -q | xargs -r docker kill || true
           
-          # Build and start services
-          $DOCKER_COMPOSE_CMD -f docker-compose.prod.yml build --no-cache
+          # Clean up old images and containers
+          echo "🧹 Cleaning up old images..."
+          docker system prune -af --volumes || true
+          
+          # Pull latest base images
+          echo "📥 Pulling latest base images..."
+          $DOCKER_COMPOSE_CMD -f docker-compose.prod.yml pull || true
+          
+          # Build fresh images
+          echo "🔨 Building fresh images..."
+          $DOCKER_COMPOSE_CMD -f docker-compose.prod.yml build --no-cache --pull
+          
+          # Start services
+          echo "🚀 Starting services..."
           $DOCKER_COMPOSE_CMD -f docker-compose.prod.yml up -d
           
           # Wait for database
