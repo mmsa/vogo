@@ -1,5 +1,6 @@
-from app.schemas.user import UserCreate, UserRead
+from app.schemas.user import UserRead
 from app.schemas.auth import (
+    UserCreate,
     LoginIn,
     TokenOut,
     RefreshIn,
