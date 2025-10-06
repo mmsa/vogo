@@ -6,7 +6,6 @@ import {
   Gift,
   Lightbulb,
   Search,
-  User,
   LogOut,
   Settings,
   Shield,

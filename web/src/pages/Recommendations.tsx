@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Sparkles, Lightbulb, Plus, Loader2 } from "lucide-react";
 import { api, CURRENT_USER_ID, Recommendation, Benefit } from "@/lib/api";
-import { SectionHeader } from "@/components/SectionHeader";
 import { RecommendationCard } from "@/components/RecommendationCard";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -192,7 +191,7 @@ export default function Recommendations() {
                     Relevant Benefits
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {relevantBenefits.slice(0, 6).map((benefit, index) => (
+                    {relevantBenefits.slice(0, 6).map((benefit) => (
                       <div
                         key={benefit.id}
                         className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"

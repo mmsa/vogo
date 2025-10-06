@@ -1,4 +1,3 @@
-import { ReactNode } from "react";
 import { LucideIcon } from "lucide-react";
 import { Card } from "./ui/Card";
 import { cn } from "@/lib/utils";

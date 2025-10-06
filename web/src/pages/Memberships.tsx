@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Plus, Search, Filter } from "lucide-react";
-import { api, CURRENT_USER_ID, Membership, SmartAddOut } from "@/lib/api";
+import { api, CURRENT_USER_ID, Membership, Benefit, SmartAddOut } from "@/lib/api";
 import { SectionHeader } from "@/components/SectionHeader";
 import { MembershipCard } from "@/components/MembershipCard";
 import { Button } from "@/components/ui/Button";
@@ -44,7 +44,6 @@ export default function Memberships() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
   const [showAddedOnly, setShowAddedOnly] = useState(false);
-  const [groupByProvider, setGroupByProvider] = useState(true);
 
   useEffect(() => {
     loadData();
@@ -63,9 +62,9 @@ export default function Memberships() {
 
       // Extract unique membership IDs from user benefits
       const userMembershipSet = new Set(
-        userBenefits.map((b) => b.membership_id)
+        userBenefits.map((b: Benefit) => b.membership_id)
       );
-      setUserMembershipIds(Array.from(userMembershipSet));
+      setUserMembershipIds(Array.from(userMembershipSet) as number[]);
     } catch (error) {
       console.error("Failed to load data:", error);
     } finally {
@@ -130,7 +129,7 @@ export default function Memberships() {
 
   const forceAddAfterWarning = () => {
     const membershipToAdd = memberships.find(
-      (m) => m.provider_slug === smartCheck?.impacted_benefits[0]?.membership_id
+      (m) => m.id === smartCheck?.impacted_benefits[0]?.membership_id
     );
     if (membershipToAdd) {
       setSelectedMemberships((prev) => [...prev, membershipToAdd.id]);
@@ -199,18 +198,6 @@ export default function Memberships() {
     [filteredMemberships, userMembershipIds]
   );
 
-  // Group memberships by provider
-  const groupedByProvider = useMemo(() => {
-    const groups: Record<string, Membership[]> = {};
-    filteredMemberships.forEach((m) => {
-      const provider = m.provider_name || m.name.split(" ")[0] || "Other";
-      if (!groups[provider]) {
-        groups[provider] = [];
-      }
-      groups[provider].push(m);
-    });
-    return groups;
-  }, [filteredMemberships]);
 
   if (loading) {
     return (
@@ -401,7 +388,7 @@ export default function Memberships() {
                     <ul className="text-xs space-y-0.5">
                       {smartCheck.impacted_benefits
                         .slice(0, 3)
-                        .map((benefit, idx) => (
+                        .map((benefit: Benefit, idx: number) => (
                           <li key={idx}>• {benefit.title}</li>
                         ))}
                     </ul>

@@ -33,11 +33,11 @@ export default function Benefits() {
       ]);
 
       // Create membership lookup map
-      const membershipMap = new Map(membershipsData.map((m) => [m.id, m]));
+      const membershipMap = new Map(membershipsData.map((m: Membership) => [m.id, m]));
       setMemberships(membershipMap);
 
       // Attach membership info to benefits
-      const enrichedBenefits = benefitsData.map((benefit) => ({
+      const enrichedBenefits = benefitsData.map((benefit: Benefit) => ({
         ...benefit,
         membership: membershipMap.get(benefit.membership_id),
       }));
