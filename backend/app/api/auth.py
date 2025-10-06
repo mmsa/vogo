@@ -15,6 +15,7 @@ from app.core.security import (
     decode_token,
 )
 from app.models import User, Session as SessionModel
+from app.models.user import UserRole
 from app.schemas import (
     UserCreate,
     UserRead,
@@ -41,7 +42,7 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
     user = User(
         email=user_in.email,
         password_hash=hash_password(user_in.password),
-        role="user",
+        role=UserRole.USER,
         is_active=True,
     )
     db.add(user)

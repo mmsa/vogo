@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.core.db import SessionLocal
 from app.core.security import hash_password
 from app.models import User
+from app.models.user import UserRole
 
 
 def fix_passwords():
@@ -21,7 +22,7 @@ def fix_passwords():
         admin = db.query(User).filter(User.email == "admin@vogo.app").first()
         if admin:
             admin.password_hash = hash_password("ChangeMe123!")
-            admin.role = "admin"
+            admin.role = UserRole.ADMIN
             admin.is_active = True
             print("✅ Updated admin@vogo.app password")
         else:
@@ -29,7 +30,7 @@ def fix_passwords():
             admin = User(
                 email="admin@vogo.app",
                 password_hash=hash_password("ChangeMe123!"),
-                role="admin",
+                role=UserRole.ADMIN,
                 is_active=True,
             )
             db.add(admin)
@@ -39,7 +40,7 @@ def fix_passwords():
         test = db.query(User).filter(User.email == "test@vogo.app").first()
         if test:
             test.password_hash = hash_password("TestPass123!")
-            test.role = "user"
+            test.role = UserRole.USER
             test.is_active = True
             print("✅ Updated test@vogo.app password")
         else:
@@ -47,7 +48,7 @@ def fix_passwords():
             test = User(
                 email="test@vogo.app",
                 password_hash=hash_password("TestPass123!"),
-                role="user",
+                role=UserRole.USER,
                 is_active=True,
             )
             db.add(test)

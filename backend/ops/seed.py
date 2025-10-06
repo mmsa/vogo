@@ -12,6 +12,7 @@ from app.core.db import SessionLocal, engine, Base
 from app.core.config import settings
 from app.core.security import hash_password
 from app.models import Membership, Benefit, Vendor, User
+from app.models.user import UserRole
 
 
 def create_tables():
@@ -110,7 +111,7 @@ def create_initial_users(db: Session):
         admin = User(
             email=admin_email,
             password_hash=hash_password(admin_password),
-            role="admin",
+            role=UserRole.ADMIN,
             is_active=True,
         )
         db.add(admin)
@@ -128,7 +129,7 @@ def create_initial_users(db: Session):
         user = User(
             email=test_email,
             password_hash=hash_password(test_password),
-            role="user",
+            role=UserRole.USER,
             is_active=True,
         )
         db.add(user)
