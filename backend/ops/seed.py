@@ -9,6 +9,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from sqlalchemy.orm import Session
 from app.core.db import SessionLocal, engine, Base
+from app.core.config import settings
+from app.core.security import hash_password
 from app.models import Membership, Benefit, Vendor, User
 
 
@@ -97,14 +99,43 @@ def upsert_benefit(db: Session, membership_id: int, benefit_data: dict):
         db.add(benefit)
 
 
-def create_test_user(db: Session):
-    """Create a test user for development."""
-    user = db.query(User).filter(User.id == 1).first()
+def create_initial_users(db: Session):
+    """Create admin and test users."""
+    # Create admin user
+    admin_email = settings.admin_email or "admin@vogo.app"
+    admin_password = settings.admin_password or "ChangeMe123!"
+
+    admin = db.query(User).filter(User.email == admin_email).first()
+    if not admin:
+        admin = User(
+            email=admin_email,
+            password_hash=hash_password(admin_password),
+            role="admin",
+            is_active=True,
+        )
+        db.add(admin)
+        db.flush()
+        print(f"✓ Created admin user: {admin.email} (password: {admin_password})")
+    else:
+        print(f"✓ Admin user already exists: {admin.email}")
+
+    # Create test user
+    test_email = "test@vogo.app"
+    test_password = "TestPass123!"
+
+    user = db.query(User).filter(User.email == test_email).first()
     if not user:
-        user = User(email="test@vogo.com")
+        user = User(
+            email=test_email,
+            password_hash=hash_password(test_password),
+            role="user",
+            is_active=True,
+        )
         db.add(user)
         db.flush()
-        print(f"✓ Created test user: {user.email} (ID: {user.id})")
+        print(f"✓ Created test user: {user.email} (password: {test_password})")
+    else:
+        print(f"✓ Test user already exists: {user.email}")
 
 
 def seed_database():
@@ -120,8 +151,10 @@ def seed_database():
 
     db = SessionLocal()
     try:
-        # Create test user
-        create_test_user(db)
+        # Create admin and test users
+        print("\nCreating users...")
+        create_initial_users(db)
+        db.commit()
 
         # Process memberships and benefits
         membership_count = 0

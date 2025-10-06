@@ -31,6 +31,9 @@ Writing Guidelines:
 - Make it actionable with clear next steps
 - Show urgency where relevant ("This month", "Before renewal")
 - Reference their specific memberships by name
+- CRITICAL: Use actual benefit TITLES from the data, NEVER write "Benefit ID X" in the rationale
+- Example good rationale: "Your Amex Platinum includes £100 in annual dining credits that you might not be using..."
+- Example BAD rationale: "Your Amex Platinum includes a dining benefit (Benefit ID 32)..."
 
 Return strictly in JSON format (no markdown, no code blocks, just raw JSON):
 
@@ -53,7 +56,8 @@ Return strictly in JSON format (no markdown, no code blocks, just raw JSON):
 Important:
 - estimated_saving values MUST be in pence (multiply GBP by 100)
 - Be generous with savings estimates based on typical membership costs
-- Use benefit IDs (integers) from the provided data
+- For benefit_match_ids field: Use benefit IDs (integers) from the provided data
+- In rationale text: Use the actual benefit TITLE, not "Benefit ID X"
 - kind must be one of: overlap, unused, switch, bundle, tip
 - Make rationale personal and actionable, not generic
 - Return valid JSON only, no additional text

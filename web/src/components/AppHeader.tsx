@@ -1,4 +1,5 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useState } from "react";
 import {
   LayoutDashboard,
   CreditCard,
@@ -6,10 +7,15 @@ import {
   Lightbulb,
   Search,
   User,
+  LogOut,
+  Settings,
+  Shield,
 } from "lucide-react";
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
 import { ModeToggle } from "./ui/ModeToggle";
+import { Badge } from "./ui/Badge";
+import { useAuth } from "@/store/auth";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -21,6 +27,14 @@ const navItems = [
 
 export function AppHeader() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-zinc-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:border-zinc-800 dark:bg-zinc-950/95">
@@ -30,8 +44,9 @@ export function AppHeader() {
           <div className="flex items-center gap-8">
             <Link to="/" className="flex items-center gap-2">
               <div className="bg-gradient-to-r from-primary to-primary-light rounded-xl px-3 py-1.5">
-                <span className="text-white font-bold text-xl">Vogo</span>
+                <span className="text-white font-bold text-xl">VogPlus</span>
               </div>
+              <span className="hidden sm:inline text-xs text-zinc-400 dark:text-zinc-500 font-medium">.ai</span>
             </Link>
 
             {/* Nav Items */}
@@ -74,13 +89,81 @@ export function AppHeader() {
             <ModeToggle />
 
             {/* User Menu */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-9 h-9 p-0 rounded-full"
-            >
-              <User className="w-5 h-5" />
-            </Button>
+            <div className="relative">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-9 gap-2 px-3"
+                onClick={() => setShowUserMenu(!showUserMenu)}
+              >
+                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary to-primary-light flex items-center justify-center text-white text-sm font-medium">
+                  {user?.email.charAt(0).toUpperCase()}
+                </div>
+                <span className="hidden md:inline text-sm font-medium">
+                  {user?.email.split('@')[0]}
+                </span>
+                {user?.role === 'admin' && (
+                  <Badge variant="default" className="hidden lg:inline-flex">
+                    Admin
+                  </Badge>
+                )}
+              </Button>
+
+              {/* Dropdown Menu */}
+              {showUserMenu && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowUserMenu(false)}
+                  />
+                  <div className="absolute right-0 mt-2 w-64 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-lg z-50 overflow-hidden">
+                    {/* User Info */}
+                    <div className="p-4 border-b border-zinc-200 dark:border-zinc-800">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary-light flex items-center justify-center text-white font-medium">
+                          {user?.email.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-zinc-900 dark:text-white truncate">
+                            {user?.email}
+                          </p>
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
+                            {user?.role === 'admin' && (
+                              <>
+                                <Shield className="h-3 w-3" />
+                                Administrator
+                              </>
+                            )}
+                            {user?.role === 'user' && 'Member'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Menu Items */}
+                    <div className="p-2">
+                      <button
+                        onClick={() => {
+                          setShowUserMenu(false);
+                          // Navigate to settings when implemented
+                        }}
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                      >
+                        <Settings className="h-4 w-4" />
+                        Settings
+                      </button>
+                      <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        Sign out
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
