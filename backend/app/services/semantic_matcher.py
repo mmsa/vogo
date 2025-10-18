@@ -35,7 +35,7 @@ def get_embedding(text: str, model: str = "text-embedding-3-small") -> List[floa
     """
     if not client:
         raise RuntimeError("OpenAI client not initialized. Check OPENAI_API_KEY.")
-    
+
     # Create cache key
     cache_key = hashlib.md5(f"{model}:{text}".encode()).hexdigest()
 

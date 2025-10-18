@@ -79,21 +79,23 @@ async function handlePageContext(msg: any) {
     }
 
     const data = await r.json();
-    
+
     // Transform semantic response to match old format for popup
     const transformed = {
-      recommendations: data.has_matches ? [
-        {
-          title: data.message,
-          kind: "tip",
-          action_url: null,
-          estimated_saving_min: null,
-          estimated_saving_max: null,
-        }
-      ] : [],
+      recommendations: data.has_matches
+        ? [
+            {
+              title: data.message,
+              kind: "tip",
+              action_url: null,
+              estimated_saving_min: null,
+              estimated_saving_max: null,
+            },
+          ]
+        : [],
       relevant_benefits: data.highlight_benefit_ids || [],
     };
-    
+
     console.log(
       "  ✅ Got semantic match:",
       data.has_matches ? "YES" : "NO",
