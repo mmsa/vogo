@@ -63,55 +63,62 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
         </div>
       </div>
     `;
-    
-    const emailInput = document.getElementById("loginEmail") as HTMLInputElement;
-    const passwordInput = document.getElementById("loginPassword") as HTMLInputElement;
+
+    const emailInput = document.getElementById(
+      "loginEmail"
+    ) as HTMLInputElement;
+    const passwordInput = document.getElementById(
+      "loginPassword"
+    ) as HTMLInputElement;
     const loginBtn = document.getElementById("loginBtn") as HTMLButtonElement;
     const loginError = document.getElementById("loginError") as HTMLDivElement;
-    const openAppBtn = document.getElementById("openAppBtn") as HTMLButtonElement;
-    
+    const openAppBtn = document.getElementById(
+      "openAppBtn"
+    ) as HTMLButtonElement;
+
     // Login handler
     loginBtn.onclick = async () => {
       const email = emailInput.value.trim();
       const password = passwordInput.value.trim();
-      
+
       if (!email || !password) {
         loginError.textContent = "Please enter email and password";
         loginError.style.display = "block";
         return;
       }
-      
+
       loginBtn.textContent = "Signing in...";
       loginBtn.disabled = true;
       loginError.style.display = "none";
-      
+
       try {
         const response = await fetch(apiBase + "/api/auth/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password })
+          body: JSON.stringify({ email, password }),
         });
-        
+
         if (!response.ok) {
-          const error = await response.json().catch(() => ({ detail: "Login failed" }));
+          const error = await response
+            .json()
+            .catch(() => ({ detail: "Login failed" }));
           loginError.textContent = error.detail || "Invalid credentials";
           loginError.style.display = "block";
           loginBtn.textContent = "Sign In";
           loginBtn.disabled = false;
           return;
         }
-        
+
         const data = await response.json();
-        
+
         // Save token to extension storage
         await chrome.storage.sync.set({
           accessToken: data.access_token,
-          apiBase: apiBase
+          apiBase: apiBase,
         });
-        
+
         // Reload popup to show recommendations
         location.reload();
-        
       } catch (e) {
         loginError.textContent = "Connection failed. Is the backend running?";
         loginError.style.display = "block";
@@ -119,22 +126,22 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
         loginBtn.disabled = false;
       }
     };
-    
+
     // Enter key to submit
-    [emailInput, passwordInput].forEach(input => {
+    [emailInput, passwordInput].forEach((input) => {
       input.addEventListener("keypress", (e) => {
         if (e.key === "Enter") loginBtn.click();
       });
     });
-    
+
     // Open app button
     openAppBtn.onclick = () => {
       chrome.tabs.create({ url: "http://localhost:5173" });
     };
-    
+
     // Focus email input
     emailInput.focus();
-    
+
     return;
   }
 

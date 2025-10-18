@@ -10,23 +10,28 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
     handlePageContext(msg);
     return true;
   }
-  
+
   // Handle popup requests for recommendations
   if (msg?.type === "GET_RECS") {
     const lastRecs = await gs<any>(LAST_RECS, "local");
-    sendResponse(lastRecs || { hostname: msg.hostname, data: null, error: null });
+    sendResponse(
+      lastRecs || { hostname: msg.hostname, data: null, error: null }
+    );
     return true;
   }
 });
 
 async function handlePageContext(msg: any) {
   const { hostname, isCheckout } = msg;
+  console.log("🔧 Service Worker: Handling", hostname);
+
   const cache = (await gs<Record<string, any>>(CACHE, "local")) || {};
   const cached = cache[hostname];
   const now = Date.now();
 
   // Check cache (10 min TTL)
   if (cached && now - cached.ts < 10 * 60 * 1000) {
+    console.log("  ✅ Using cached data");
     await ss(LAST_RECS, { hostname, data: cached.data, error: null }, "local");
     notifyPopup();
     return;
@@ -36,12 +41,20 @@ async function handlePageContext(msg: any) {
   const apiBase = (await gs<string>("apiBase")) || "http://localhost:8000";
   const token = await gs<string>("accessToken");
 
+  console.log("  📡 Fetching fresh data from", apiBase);
+  console.log("  🔑 Token:", token ? "present" : "missing");
+
   if (!token) {
-    await ss(LAST_RECS, { 
-      hostname, 
-      data: null, 
-      error: "Not authenticated. Please set your token in Options." 
-    }, "local");
+    console.error("  ❌ No token!");
+    await ss(
+      LAST_RECS,
+      {
+        hostname,
+        data: null,
+        error: "Not authenticated. Please set your token in Options.",
+      },
+      "local"
+    );
     notifyPopup();
     return;
   }
@@ -51,16 +64,25 @@ async function handlePageContext(msg: any) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": "Bearer " + token
+        Authorization: "Bearer " + token,
       },
-      body: JSON.stringify({ domain: hostname })
+      body: JSON.stringify({ domain: hostname }),
     });
 
+    console.log("  📥 Response status:", r.status);
+
     if (!r.ok) {
-      throw new Error(r.status === 401 ? "Authentication failed" : `HTTP ${r.status}`);
+      throw new Error(
+        r.status === 401 ? "Authentication failed" : `HTTP ${r.status}`
+      );
     }
 
     const data = await r.json();
+    console.log(
+      "  ✅ Got data:",
+      data?.recommendations?.length || 0,
+      "recommendations"
+    );
 
     // Update cache
     cache[hostname] = { ts: now, data };
@@ -68,6 +90,7 @@ async function handlePageContext(msg: any) {
 
     // Store for popup
     await ss(LAST_RECS, { hostname, data, error: null }, "local");
+    console.log("  💾 Stored in LAST_RECS");
     notifyPopup();
 
     // Auto-open on checkout if enabled
@@ -80,11 +103,16 @@ async function handlePageContext(msg: any) {
       }
     }
   } catch (e) {
-    await ss(LAST_RECS, { 
-      hostname, 
-      data: null, 
-      error: String(e) 
-    }, "local");
+    console.error("  ❌ Error:", e);
+    await ss(
+      LAST_RECS,
+      {
+        hostname,
+        data: null,
+        error: String(e),
+      },
+      "local"
+    );
     notifyPopup();
   }
 }
@@ -99,4 +127,3 @@ function notifyPopup() {
     // Extension context invalidated or popup not open
   }
 }
-
