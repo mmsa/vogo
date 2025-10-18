@@ -109,12 +109,12 @@ async def check_semantic(
             }
 
         # Step 3: Semantic matching with embeddings
-        print(f"   🤖 Running semantic matching (threshold=0.6)...")
+        print(f"   🤖 Running semantic matching (threshold=0.5)...")
         semantic_matches = await find_semantic_matches(
             metadata,
             benefits_with_membership,
             top_k=5,
-            threshold=0.6,  # 60% similarity minimum
+            threshold=0.5,  # 50% similarity minimum (lowered for better recall)
         )
         print(f"   ✅ Found {len(semantic_matches)} matches")
 

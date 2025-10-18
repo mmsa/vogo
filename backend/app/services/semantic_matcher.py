@@ -195,26 +195,35 @@ async def generate_user_message(
     }
 
     # Create prompt for mini LLM
-    prompt = f"""You're VogPlus assistant. User is browsing a website and you found relevant benefits.
+    # Detect if this is a comparison/shopping site
+    is_comparison_site = any(word in context['page']['domain'].lower() or word in context['page']['title'].lower() 
+                            for word in ['compare', 'comparison', 'shop', 'find', 'search', 'deals', 'best'])
+    
+    prompt = f"""You're VogPlus assistant. User is browsing a website and you found relevant benefits they ALREADY HAVE.
 
 Current page: {context['page']['domain']}
 Page title: {context['page']['title']}
 
-Matched benefits:
+User's existing benefits that match this page:
 {json.dumps(context['matches'], indent=2)}
 
-Generate a friendly, concise message (1-2 sentences) telling the user:
-1. What benefits they have that are relevant to THIS website
-2. How they can use them right now
+IMPORTANT CONTEXT:
+{'- This appears to be a COMPARISON/SHOPPING site - user is shopping for something they already have!' if is_comparison_site else '- User is on a service provider site'}
+- The user ALREADY HAS these benefits from their memberships
+- Help them realize they don't need to buy what's on this page if they already have it!
+
+Generate a friendly, concise message (1-2 sentences):
+- If comparison site: "Hey! You already have [benefit] from [membership] - you might not need this!"
+- If service site: "Good news! You have [benefit] from [membership] that works here!"
 
 Return ONLY JSON:
 {{
-  "message": "Your 1-2 sentence message here",
-  "action": "View Benefits" or "Learn More" or "Use Now",
+  "message": "Your helpful 1-2 sentence message",
+  "action": "View Benefits",
   "highlight_benefit_ids": [list of most relevant benefit IDs]
 }}
 
-Be specific and actionable. Focus on the TOP matching benefit.
+Focus on the TOP matching benefit with highest score.
 """
 
     if not client:
