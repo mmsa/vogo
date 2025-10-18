@@ -42,26 +42,19 @@ async def check_semantic(
         print(f"\n🔍 SEMANTIC CHECK START")
         print(f"   URL: {request.url}")
         print(f"   User ID: {current_user.id}")
-        
+
         # Step 1: Scrape page metadata
         print(f"   📄 Scraping page metadata...")
         metadata = await scrape_page_metadata(request.url)
         print(f"   ✅ Metadata scraped: {list(metadata.keys())}")
 
-        if "error" in metadata:
-            print(f"   ❌ ERROR in metadata: {metadata.get('error')}")
-            # Return graceful fallback
-            return {
-                "success": False,
-                "error": metadata.get("error"),
-                "url": request.url,
-                "domain": metadata.get("domain", ""),
-                "has_matches": False,
-                "message": f"Unable to check benefits: {metadata.get('error')}",
-            }
+        if metadata.get("llm_inferred"):
+            print(f"   🤖 Used LLM to infer content (scraping blocked)")
         
-        print(f"   📊 Page: {metadata.get('domain')} - {metadata.get('title', 'No title')}")
-        
+        print(
+            f"   📊 Page: {metadata.get('domain')} - {metadata.get('title', 'No title')}"
+        )
+
         # Step 2: Get user's benefits
         print(f"   🔍 Fetching user memberships...")
         user_memberships = (
@@ -101,7 +94,7 @@ async def check_semantic(
 
                 for benefit in benefits:
                     benefits_with_membership.append((benefit, membership))
-        
+
         print(f"   ✅ Found {len(benefits_with_membership)} approved benefits")
 
         if not benefits_with_membership:
@@ -124,7 +117,7 @@ async def check_semantic(
             threshold=0.6,  # 60% similarity minimum
         )
         print(f"   ✅ Found {len(semantic_matches)} matches")
-        
+
         # Step 4: Generate user message with mini LLM
         print(f"   💬 Generating AI message...")
         result = await generate_user_message(metadata, semantic_matches)
@@ -146,6 +139,7 @@ async def check_semantic(
     except Exception as e:
         print(f"\n   ❌❌❌ EXCEPTION: {type(e).__name__}: {str(e)}\n")
         import traceback
+
         traceback.print_exc()
         return {
             "success": False,

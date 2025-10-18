@@ -3,6 +3,117 @@
 import httpx
 from bs4 import BeautifulSoup
 from typing import Dict, Optional
+from openai import OpenAI
+from app.core.config import settings
+
+# Initialize OpenAI client
+openai_client = None
+if settings.openai_api_key:
+    openai_client = OpenAI(api_key=settings.openai_api_key)
+
+
+def infer_metadata_from_url(url: str) -> Dict[str, str]:
+    """
+    Use LLM to infer page metadata when scraping fails.
+    
+    Args:
+        url: Full URL to analyze
+        
+    Returns:
+        Dictionary with inferred metadata
+    """
+    if not openai_client:
+        # Fallback to basic URL parsing
+        parsed_url = httpx.URL(url)
+        domain = parsed_url.host or ""
+        path = parsed_url.path
+        path_parts = path.strip("/").split("/")
+        path_text = " ".join(part.replace("-", " ").replace("_", " ") for part in path_parts if part)
+        
+        return {
+            "url": url,
+            "domain": domain,
+            "title": f"{path_text} {domain}".strip() if path_text else domain,
+            "description": f"Content from {domain}: {path_text}",
+            "h1": path_text,
+            "content_snippet": f"{domain} {path_text}",
+            "og_title": "",
+            "og_description": "",
+            "keywords": "",
+            "llm_inferred": False,
+        }
+    
+    print(f"      🤖 Using LLM to infer page content from URL...")
+    
+    prompt = f"""Analyze this URL and infer what the page is about:
+
+URL: {url}
+
+Based on the domain and path, generate realistic page metadata as JSON:
+{{
+  "title": "Brief title (5-10 words)",
+  "description": "What this page likely offers (1-2 sentences)",
+  "keywords": "5-8 relevant keywords, comma-separated",
+  "category": "Main category (e.g., travel, insurance, shopping, breakdown cover)"
+}}
+
+Be specific and realistic. Example:
+- "amazon.co.uk/books" → title: "Books - Amazon UK", category: "shopping"
+- "rac.co.uk/breakdown-cover" → title: "RAC Breakdown Cover", category: "breakdown cover"
+"""
+    
+    try:
+        response = openai_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"},
+            temperature=0.3,
+            max_tokens=200,
+        )
+        
+        import json
+        result = json.loads(response.choices[0].message.content)
+        
+        parsed_url = httpx.URL(url)
+        domain = parsed_url.host or ""
+        
+        print(f"      ✅ LLM inferred: {result.get('title', 'N/A')}")
+        
+        return {
+            "url": url,
+            "domain": domain,
+            "title": result.get("title", domain),
+            "description": result.get("description", ""),
+            "h1": result.get("title", ""),
+            "content_snippet": result.get("description", ""),
+            "og_title": "",
+            "og_description": "",
+            "keywords": result.get("keywords", ""),
+            "category": result.get("category", ""),
+            "llm_inferred": True,
+        }
+    
+    except Exception as e:
+        print(f"      ❌ LLM inference failed: {str(e)}")
+        # Fall back to basic parsing
+        parsed_url = httpx.URL(url)
+        domain = parsed_url.host or ""
+        path = parsed_url.path
+        path_parts = path.strip("/").split("/")
+        path_text = " ".join(part.replace("-", " ").replace("_", " ") for part in path_parts if part)
+        
+        return {
+            "url": url,
+            "domain": domain,
+            "title": f"{path_text} {domain}".strip() if path_text else domain,
+            "description": f"Content from {domain}: {path_text}",
+            "h1": path_text,
+            "content_snippet": f"{domain} {path_text}",
+            "og_title": "",
+            "og_description": "",
+            "keywords": "",
+            "llm_inferred": False,
+        }
 
 
 async def scrape_page_metadata(url: str, timeout: int = 10) -> Dict[str, str]:
@@ -32,7 +143,7 @@ async def scrape_page_metadata(url: str, timeout: int = 10) -> Dict[str, str]:
             "Sec-Fetch-Site": "none",
             "Cache-Control": "max-age=0",
         }
-        
+
         async with httpx.AsyncClient(
             follow_redirects=True,
             timeout=timeout,
@@ -101,20 +212,12 @@ async def scrape_page_metadata(url: str, timeout: int = 10) -> Dict[str, str]:
             return metadata
 
     except Exception as e:
-        # Return minimal metadata on error
-        print(f"      ❌ SCRAPING ERROR: {type(e).__name__}: {str(e)}")
-        return {
-            "url": url,
-            "domain": httpx.URL(url).host or "",
-            "title": "",
-            "description": "",
-            "h1": "",
-            "content_snippet": "",
-            "og_title": "",
-            "og_description": "",
-            "keywords": "",
-            "error": str(e),
-        }
+        # Scraping blocked - use LLM to infer metadata from URL!
+        print(f"      ❌ SCRAPING BLOCKED: {type(e).__name__}")
+        print(f"      🎯 FALLBACK: Using LLM to infer page content from URL")
+        
+        # Use LLM to understand what the page is about from the URL
+        return infer_metadata_from_url(url)
 
 
 def metadata_to_text(metadata: Dict[str, str]) -> str:
