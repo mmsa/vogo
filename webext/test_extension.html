@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>VogPlus Extension Test</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; max-width: 800px; }
+    button { padding: 10px 20px; margin: 10px 0; font-size: 16px; cursor: pointer; }
+    pre { background: #f5f5f5; padding: 15px; border-radius: 8px; overflow-x: auto; }
+    .success { color: green; }
+    .error { color: red; }
+  </style>
+</head>
+<body>
+  <h1>🧪 VogPlus Extension Diagnostic</h1>
+  
+  <button onclick="testAPI()">1. Test API Directly</button>
+  <div id="apiResult"></div>
+  
+  <button onclick="testStorage()">2. Test Extension Storage</button>
+  <div id="storageResult"></div>
+  
+  <button onclick="testServiceWorker()">3. Test Service Worker</button>
+  <div id="swResult"></div>
+  
+  <script>
+    async function testAPI() {
+      const result = document.getElementById('apiResult');
+      result.innerHTML = '<p>Testing...</p>';
+      
+      try {
+        // Login
+        const loginRes = await fetch('http://localhost:8000/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: 'admin@vogo.app', password: 'ChangeMe123!' })
+        });
+        
+        if (!loginRes.ok) {
+          result.innerHTML = `<p class="error">❌ Login failed: ${loginRes.status}</p>`;
+          return;
+        }
+        
+        const { access_token } = await loginRes.json();
+        
+        // Test recommendations
+        const recsRes = await fetch('http://localhost:8000/api/ai/recommendations', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${access_token}`
+          },
+          body: JSON.stringify({ domain: 'www.theaa.com' })
+        });
+        
+        if (!recsRes.ok) {
+          result.innerHTML = `<p class="error">❌ Recommendations failed: ${recsRes.status}</p>`;
+          return;
+        }
+        
+        const data = await recsRes.json();
+        result.innerHTML = `
+          <p class="success">✅ API Works!</p>
+          <pre>${JSON.stringify(data, null, 2).substring(0, 500)}...</pre>
+        `;
+      } catch (e) {
+        result.innerHTML = `<p class="error">❌ Error: ${e.message}</p>`;
+      }
+    }
+    
+    async function testStorage() {
+      const result = document.getElementById('storageResult');
+      
+      try {
+        const token = await chrome.storage.sync.get('accessToken');
+        const apiBase = await chrome.storage.sync.get('apiBase');
+        
+        result.innerHTML = `
+          <p class="success">✅ Storage accessible</p>
+          <pre>Token: ${token.accessToken ? 'present' : 'missing'}
+API Base: ${apiBase.apiBase || 'default'}</pre>
+        `;
+      } catch (e) {
+        result.innerHTML = `<p class="error">❌ Error: ${e.message}</p>`;
+      }
+    }
+    
+    async function testServiceWorker() {
+      const result = document.getElementById('swResult');
+      result.innerHTML = '<p>Sending message...</p>';
+      
+      try {
+        const response = await chrome.runtime.sendMessage({
+          type: 'GET_RECS',
+          hostname: 'www.theaa.com'
+        });
+        
+        result.innerHTML = `
+          <p class="success">✅ Service Worker responded</p>
+          <pre>${JSON.stringify(response, null, 2).substring(0, 500)}</pre>
+        `;
+      } catch (e) {
+        result.innerHTML = `<p class="error">❌ Error: ${e.message}</p>`;
+      }
+    }
+  </script>
+</body>
+</html>
+

@@ -123,7 +123,7 @@ export default function Recommendations() {
             </span>
             <Badge variant="default" className="gap-1">
               <Sparkles className="w-3 h-3" />
-              GPT-4o
+              AI Analysis
             </Badge>
           </div>
         </Card>
@@ -136,7 +136,7 @@ export default function Recommendations() {
             <Card className="p-8 text-center">
               <Loader2 className="w-12 h-12 text-primary mx-auto mb-4 animate-spin" />
               <p className="font-medium text-zinc-900 dark:text-zinc-100">
-                Analyzing with GPT-4o...
+                Analysis using AI...
               </p>
               <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
                 This may take a few seconds

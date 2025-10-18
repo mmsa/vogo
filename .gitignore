@@ -218,3 +218,6 @@ secrets/
 .~lock.*
 .directory
 *.sw?
+
+# Documentation (Markdown files)
+*.md

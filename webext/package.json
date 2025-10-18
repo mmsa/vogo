@@ -1,0 +1,16 @@
+{
+  "name": "vogplus-webext",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "zip": "cd dist && zip -r ../vogplus_ext.zip ."
+  },
+  "devDependencies": {
+    "vite": "^5",
+    "typescript": "^5",
+    "@types/chrome": "^0.0.270"
+  }
+}
+

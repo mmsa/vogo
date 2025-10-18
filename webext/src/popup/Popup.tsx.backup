@@ -1,0 +1,446 @@
+const root = document.getElementById("app")!;
+let currentHostname = "";
+let currentUser: any = null;
+
+// Initial render
+root.innerHTML = `
+  <div class="wrap">
+    <div class="header">
+      <div class="header-top">
+        <div class="logo">💎 VogPlus</div>
+        <div class="domain-chip" id="domain">—</div>
+      </div>
+      <div class="header-subtitle">Smart perks. Zero effort.</div>
+    </div>
+    <div id="content">
+      <div class="loading-section">
+        <div class="spinner"></div>
+        <div class="loading-text">Checking authentication...</div>
+      </div>
+    </div>
+  </div>
+`;
+
+// Initialize
+async function initialize() {
+  // Check authentication first
+  const isAuthenticated = await checkAuthentication();
+
+  if (!isAuthenticated) {
+    showLoginForm();
+    return;
+  }
+
+  // Get current tab domain
+  chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
+    const domainEl = document.getElementById("domain")!;
+    if (tab?.url) {
+      try {
+        const url = new URL(tab.url);
+        currentHostname = url.hostname;
+        domainEl.textContent = currentHostname;
+
+        // Update header with user info
+        updateHeaderWithUser();
+
+        // Load recommendations
+        await loadRecommendations();
+      } catch {
+        domainEl.textContent = "Invalid URL";
+        showError("Invalid URL");
+      }
+    } else {
+      domainEl.textContent = "No tab";
+      showError("No active tab");
+    }
+  });
+}
+
+// Check if user is authenticated
+async function checkAuthentication(): Promise<boolean> {
+  const apiBase = await chrome.storage.sync
+    .get("apiBase")
+    .then((r) => r.apiBase || "http://localhost:8000");
+  const token = await chrome.storage.sync
+    .get("accessToken")
+    .then((r) => r.accessToken);
+
+  if (!token) {
+    return false;
+  }
+
+  // Verify token by fetching user info
+  try {
+    const response = await fetch(`${apiBase}/api/users/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (response.ok) {
+      currentUser = await response.json();
+      return true;
+    } else {
+      // Token invalid, clear it
+      await chrome.storage.sync.remove("accessToken");
+      return false;
+    }
+  } catch (e) {
+    console.error("Auth check failed:", e);
+    return false;
+  }
+}
+
+// Update header to show logged-in user
+function updateHeaderWithUser() {
+  const subtitle = document.querySelector(".header-subtitle") as HTMLElement;
+  if (currentUser && subtitle) {
+    const name = currentUser.email?.split("@")[0] || "User";
+    subtitle.innerHTML = `👤 <span style="font-weight: 600;">${name}</span> • Smart perks. Zero effort.`;
+  }
+}
+
+// Show login form
+function showLoginForm() {
+  const content = document.getElementById("content")!;
+  content.innerHTML = `
+    <div class="auth-section">
+      <h3>🔐 Sign in to VogPlus</h3>
+      <p>Connect your account to see personalized recommendations</p>
+      
+      <div style="margin: 20px 0;">
+        <input type="email" id="login-email" placeholder="Email" 
+          style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 10px; font-size: 14px;" />
+        <input type="password" id="login-password" placeholder="Password" 
+          style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 10px; font-size: 14px;" />
+        <div id="login-error" style="color: #dc2626; font-size: 12px; margin-bottom: 10px; display: none;"></div>
+        <button class="auth-btn" id="loginBtn">Sign In</button>
+      </div>
+      
+      <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
+        <p style="font-size: 12px; color: #6b7280; margin-bottom: 8px;">Don't have an account?</p>
+        <button class="auth-btn" id="openApp" style="background: transparent; color: #667eea; box-shadow: none; border: 1px solid #667eea;">
+          Open VogPlus App
+        </button>
+      </div>
+    </div>
+  `;
+
+  // Handle login
+  document.getElementById("loginBtn")!.onclick = async () => {
+    const email = (document.getElementById("login-email") as HTMLInputElement)
+      .value;
+    const password = (
+      document.getElementById("login-password") as HTMLInputElement
+    ).value;
+    const errorEl = document.getElementById("login-error")!;
+    const loginBtn = document.getElementById("loginBtn") as HTMLButtonElement;
+
+    if (!email || !password) {
+      errorEl.textContent = "Please enter email and password";
+      errorEl.style.display = "block";
+      return;
+    }
+
+    loginBtn.textContent = "Signing in...";
+    loginBtn.disabled = true;
+    errorEl.style.display = "none";
+
+    try {
+      const apiBase = await chrome.storage.sync
+        .get("apiBase")
+        .then((r) => r.apiBase || "http://localhost:8000");
+      const response = await fetch(`${apiBase}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        await chrome.storage.sync.set({
+          accessToken: data.access_token,
+          apiBase: apiBase,
+        });
+
+        // Reload popup
+        location.reload();
+      } else {
+        const error = await response.json();
+        errorEl.textContent = error.detail || "Invalid email or password";
+        errorEl.style.display = "block";
+        loginBtn.textContent = "Sign In";
+        loginBtn.disabled = false;
+      }
+    } catch (e) {
+      errorEl.textContent = "Failed to connect. Is the backend running?";
+      errorEl.style.display = "block";
+      loginBtn.textContent = "Sign In";
+      loginBtn.disabled = false;
+    }
+  };
+
+  // Open app button
+  document.getElementById("openApp")!.onclick = () => {
+    chrome.tabs.create({ url: "http://localhost:5173" });
+  };
+
+  // Enter key to submit
+  const emailInput = document.getElementById("login-email")!;
+  const passwordInput = document.getElementById("login-password")!;
+  [emailInput, passwordInput].forEach((input) => {
+    input.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        document.getElementById("loginBtn")!.click();
+      }
+    });
+  });
+}
+
+// Clear cache on popup open (temporary - for debugging)
+chrome.storage.local.remove("domainCache").then(() => {
+  console.log("✅ Extension cache cleared");
+});
+
+// Start the app
+initialize();
+
+// Listen for updates from service worker
+chrome.runtime.onMessage.addListener((msg) => {
+  if (msg.type === "RECS_UPDATED") {
+    loadRecommendations();
+  }
+});
+
+// Load recommendations from storage
+async function loadRecommendations() {
+  try {
+    console.log("🔍 Loading recommendations for:", currentHostname);
+
+    // First, trigger the service worker to fetch if needed
+    chrome.runtime
+      .sendMessage({
+        type: "PAGE_CONTEXT",
+        hostname: currentHostname,
+        url: `https://${currentHostname}`,
+        isCheckout: false,
+      })
+      .catch((e) => console.log("Service worker trigger:", e));
+
+    // Poll for results with longer timeout
+    let attempts = 0;
+    const maxAttempts = 8; // 8 attempts x 1 second = 8 seconds max
+
+    while (attempts < maxAttempts) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      attempts++;
+
+      console.log(`  Attempt ${attempts}/${maxAttempts}...`);
+
+      try {
+        const response = await chrome.runtime.sendMessage({
+          type: "GET_RECS",
+          hostname: currentHostname,
+        });
+
+        console.log("  Response:", response);
+
+        if (response?.error) {
+          console.error("  Error:", response.error);
+          if (
+            response.error.includes("authenticated") ||
+            response.error.includes("401")
+          ) {
+            showAuthPrompt();
+            return;
+          } else {
+            showError(response.error);
+            return;
+          }
+        } else if (response?.data && response.data.recommendations) {
+          console.log(
+            "  ✅ Got recommendations:",
+            response.data.recommendations.length
+          );
+          render(response.data);
+          return;
+        }
+
+        // No data yet, continue polling
+        console.log("  No data yet, retrying...");
+      } catch (e) {
+        console.error("  Error getting recs:", e);
+      }
+    }
+
+    // Timed out
+    console.log("⏱️ Timed out waiting for recommendations");
+    showEmpty(
+      `No perks for ${currentHostname}`,
+      `We couldn't find any of your benefits that match this site. Try amazon.co.uk, booking.com, or other sites where you have perks!`
+    );
+  } catch (e) {
+    console.error("❌ Load failed:", e);
+    showError("Failed to load: " + String(e));
+  }
+}
+
+// Show authentication prompt
+function showAuthPrompt() {
+  const content = document.getElementById("content")!;
+  content.innerHTML = `
+    <div class="auth-section">
+      <h3>🔐 Sign in to VogPlus</h3>
+      <p>Connect your account to unlock personalized perk recommendations</p>
+      <button class="auth-btn" id="openApp">Open VogPlus App</button>
+      <p style="margin-top: 12px; font-size: 12px; opacity: 0.8;">
+        Sign in on the app, then come back here
+      </p>
+    </div>
+  `;
+
+  document.getElementById("openApp")!.onclick = () => {
+    chrome.tabs.create({ url: "http://localhost:5173" });
+  };
+}
+
+// Show error state
+function showError(message: string) {
+  const content = document.getElementById("content")!;
+  content.innerHTML = `
+    <div class="error-state">
+      <div class="error-title">⚠️ Something went wrong</div>
+      <div class="error-text">${message}</div>
+    </div>
+  `;
+}
+
+// Show empty state
+function showEmpty(title: string, subtitle: string) {
+  const content = document.getElementById("content")!;
+  content.innerHTML = `
+    <div class="empty-state">
+      <div class="empty-icon">🔍</div>
+      <div class="empty-title">${title}</div>
+      <div class="empty-text">${subtitle}</div>
+    </div>
+  `;
+}
+
+// Render recommendations
+function render(data: any) {
+  const content = document.getElementById("content")!;
+  const recs = data?.recommendations || [];
+
+  if (!recs.length) {
+    showEmpty(
+      `No perks for ${currentHostname}`,
+      `We couldn't find any of your benefits that match this site. Try amazon.co.uk, booking.com, or other sites where you have perks!`
+    );
+    return;
+  }
+
+  // Calculate total savings
+  const totalSavings = recs.reduce((sum: number, r: any) => {
+    const min = r.estimated_saving_min || 0;
+    const max = r.estimated_saving_max || min;
+    return sum + (min + max) / 2;
+  }, 0);
+
+  content.innerHTML = `
+    <div class="results">
+      <div class="results-header">
+        <h3>💰 ${recs.length} Way${recs.length > 1 ? "s" : ""} to Save</h3>
+        <div class="results-count">
+          ${
+            totalSavings > 0
+              ? `Potential savings: £${Math.round(totalSavings)}/year`
+              : "Exclusive perks available"
+          }
+        </div>
+      </div>
+      <div class="rec-list" id="recList"></div>
+    </div>
+  `;
+
+  const recList = document.getElementById("recList")!;
+
+  recs.slice(0, 5).forEach((rec: any, index: number) => {
+    const card = document.createElement("div");
+    card.className = "rec-card";
+    card.style.animationDelay = `${index * 0.1}s`;
+
+    const icon = getIcon(rec.kind);
+    const savings = formatSavings(rec);
+
+    card.innerHTML = `
+      <div class="rec-header">
+        <div class="rec-icon">${icon}</div>
+        <div class="rec-title-section">
+          <div class="rec-title">${rec.title}</div>
+          <span class="rec-kind kind-${rec.kind}">${rec.kind}</span>
+        </div>
+        ${savings ? `<div class="rec-savings">${savings}</div>` : ""}
+      </div>
+      <div class="rec-rationale">${rec.rationale}</div>
+      <div class="rec-footer">
+        <button class="rec-action" data-url="${rec.action_url || ""}">
+          ${rec.action_url ? "🎯 Take Action" : "✓ View Details"}
+        </button>
+        <button class="rec-dismiss">Dismiss</button>
+      </div>
+    `;
+
+    // Add click handlers
+    const actionBtn = card.querySelector(".rec-action") as HTMLButtonElement;
+    actionBtn.onclick = () => {
+      const url = actionBtn.dataset.url;
+      if (url && url !== "null" && url !== "") {
+        chrome.tabs.create({ url });
+      } else {
+        chrome.tabs.create({ url: `http://localhost:5173/recommendations` });
+      }
+    };
+
+    const dismissBtn = card.querySelector(".rec-dismiss") as HTMLButtonElement;
+    dismissBtn.onclick = (e) => {
+      e.stopPropagation();
+      card.style.animation = "slideOut 0.3s ease-out forwards";
+      setTimeout(() => card.remove(), 300);
+    };
+
+    recList.appendChild(card);
+  });
+}
+
+// Helper: Get icon for recommendation type
+function getIcon(kind: string): string {
+  const icons: Record<string, string> = {
+    overlap: "⚠️",
+    unused: "💡",
+    switch: "🔄",
+    bundle: "📦",
+    tip: "✨",
+  };
+  return icons[kind] || "💎";
+}
+
+// Helper: Format savings
+function formatSavings(rec: any): string {
+  const min = rec.estimated_saving_min;
+  const max = rec.estimated_saving_max;
+
+  if (!min && !max) return "";
+  if (min && max && min !== max) return `£${min}-£${max}`;
+  return `£${min || max}`;
+}
+
+// Add slideOut animation
+const style = document.createElement("style");
+style.textContent = `
+  @keyframes slideOut {
+    to {
+      opacity: 0;
+      transform: translateX(20px);
+    }
+  }
+`;
+document.head.appendChild(style);
