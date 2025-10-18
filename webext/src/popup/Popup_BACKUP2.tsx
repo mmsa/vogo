@@ -275,7 +275,7 @@ async function loadRecommendations() {
     console.log("⏱️ Timed out waiting for recommendations");
     showEmpty(
       `No perks for ${currentHostname}`,
-      `We couldn't find any of your benefits that match this site. Try amazon.co.uk, booking.com, or other sites where you have perks!`
+      `We couldn't find any of your benefits that match this site.
     );
   } catch (e) {
     console.error("❌ Load failed:", e);
@@ -333,7 +333,7 @@ function render(data: any) {
   if (!recs.length) {
     showEmpty(
       `No perks for ${currentHostname}`,
-      `We couldn't find any of your benefits that match this site. Try amazon.co.uk, booking.com, or other sites where you have perks!`
+      `We couldn't find any of your benefits that match this site.`
     );
     return;
   }
