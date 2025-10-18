@@ -91,20 +91,20 @@ export default function Recommendations() {
   }, [aiMode]);
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-8 animate-fade-in pb-8">
       {/* Header with Mode Toggle */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
+      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+        <div className="flex-1">
           <h1 className="text-4xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">
             Recommendations
           </h1>
-          <p className="text-zinc-600 dark:text-zinc-400">
+          <p className="text-lg text-zinc-600 dark:text-zinc-400">
             Personalized insights to maximize your benefits
           </p>
         </div>
 
         {/* Mode Toggle */}
-        <Card className="p-4 flex items-center gap-4">
+        <Card className="p-4 flex items-center gap-4 shrink-0">
           <span
             className={`text-sm font-medium transition-colors ${
               !aiMode ? "text-primary" : "text-zinc-500 dark:text-zinc-400"
@@ -171,7 +171,7 @@ export default function Recommendations() {
           ) : (
             <>
               {/* Recommendations List */}
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {recommendations.map((rec, index) => (
                   <RecommendationCard
                     key={index}
@@ -184,23 +184,23 @@ export default function Recommendations() {
               {/* Relevant Benefits Section (AI Mode) */}
               {aiMode && relevantBenefits.length > 0 && (
                 <Card
-                  className="p-6 animate-fade-in"
+                  className="p-6 animate-fade-in mt-8"
                   style={{ animationDelay: "300ms" }}
                 >
-                  <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
+                  <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">
                     Relevant Benefits
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {relevantBenefits.slice(0, 6).map((benefit) => (
                       <div
                         key={benefit.id}
-                        className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                        className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all hover:shadow-md border border-transparent hover:border-primary/20"
                       >
-                        <h4 className="font-medium text-sm text-zinc-900 dark:text-zinc-100 mb-1">
+                        <h4 className="font-semibold text-sm text-zinc-900 dark:text-zinc-100 mb-2">
                           {benefit.title}
                         </h4>
                         {benefit.description && (
-                          <p className="text-xs text-zinc-600 dark:text-zinc-400 line-clamp-2">
+                          <p className="text-xs text-zinc-600 dark:text-zinc-400 line-clamp-3 leading-relaxed">
                             {benefit.description}
                           </p>
                         )}

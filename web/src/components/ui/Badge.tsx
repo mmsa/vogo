@@ -2,7 +2,7 @@ import { HTMLAttributes, forwardRef } from "react";
 import { cn } from "@/lib/utils";
 
 interface BadgeProps extends HTMLAttributes<HTMLDivElement> {
-  variant?: "default" | "success" | "warning" | "secondary";
+  variant?: "default" | "success" | "warning" | "secondary" | "destructive";
 }
 
 const Badge = forwardRef<HTMLDivElement, BadgeProps>(
@@ -19,6 +19,8 @@ const Badge = forwardRef<HTMLDivElement, BadgeProps>(
               variant === "warning",
             "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100":
               variant === "secondary",
+            "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-500":
+              variant === "destructive",
           },
           className
         )}

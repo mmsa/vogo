@@ -13,6 +13,7 @@ from app.api import (
     check,
     llm,
     benefits,
+    ai,
 )
 
 api_router = APIRouter()
@@ -31,3 +32,6 @@ api_router.include_router(recommendations.router)
 api_router.include_router(check.router)
 api_router.include_router(llm.router)
 api_router.include_router(benefits.router)
+
+# AI Services
+api_router.include_router(ai.router)

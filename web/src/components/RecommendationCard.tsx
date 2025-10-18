@@ -95,142 +95,150 @@ export function RecommendationCard({
 
   return (
     <Card
-      className="p-6 hover:scale-[1.02] transition-all animate-fade-in hover:shadow-xl border-l-4 border-l-primary"
+      className="p-6 hover:shadow-2xl transition-all animate-fade-in border-2 border-zinc-200 dark:border-zinc-800 hover:border-primary/30"
       style={{ animationDelay: `${delay}ms` }}
     >
-      <div className="flex items-start gap-4">
-        {/* Icon */}
+      {/* Top Section - Title and Savings */}
+      <div className="flex items-start gap-4 mb-4">
         <div className={`rounded-xl p-3 flex-shrink-0 ${color}`}>
-          <Icon className="w-5 h-5" />
+          <Icon className="w-6 h-6" />
         </div>
 
-        {/* Content */}
         <div className="flex-1 min-w-0">
-          {/* Header with Savings Badge */}
-          <div className="flex items-start justify-between gap-4 mb-3">
-            <div className="flex-1">
-              <h3 className="font-bold text-lg text-zinc-900 dark:text-zinc-100 mb-1">
-                {recommendation.title}
-              </h3>
-              {savingText && (
-                <div className="flex items-center gap-2">
-                  <Badge variant="success" className="text-sm font-bold">
-                    💰 {savingText} potential savings
-                  </Badge>
-                </div>
-              )}
+          <h3 className="font-bold text-xl text-zinc-900 dark:text-zinc-100 mb-3">
+            {recommendation.title}
+          </h3>
+          {savingText && (
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-800">
+              <span className="text-2xl">💰</span>
+              <span className="text-sm font-bold text-green-800 dark:text-green-400">
+                {savingText} potential savings
+              </span>
             </div>
-          </div>
-
-          {/* Rationale */}
-          <p className="text-sm text-zinc-700 dark:text-zinc-300 mb-4 leading-relaxed">
-            {recommendation.rationale}
-          </p>
-
-          {/* Footer */}
-          <div className="flex items-center justify-between gap-4 pt-3 border-t border-zinc-200 dark:border-zinc-800">
-            <div className="flex items-center gap-2">
-              {recommendation.membership && (
-                <Badge variant="secondary" className="text-xs">
-                  📍 {recommendation.membership}
-                </Badge>
-              )}
-              {recommendation.kind && (
-                <Badge variant="default" className="text-xs capitalize">
-                  {recommendation.kind === "overlap" && "⚠️ Duplicate"}
-                  {recommendation.kind === "unused" && "💎 Unused Perk"}
-                  {recommendation.kind === "switch" && "🔄 Better Option"}
-                  {recommendation.kind === "bundle" && "📦 Bundle"}
-                  {recommendation.kind === "tip" && "💡 Quick Win"}
-                </Badge>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1 text-xs"
-                onClick={() => setShowDetails(true)}
-              >
-                <Info className="w-3 h-3" />
-                Details
-              </Button>
-              {recommendation.action_url ? (
-                <Button
-                  size="sm"
-                  className="gap-1 text-xs font-semibold"
-                  onClick={() =>
-                    window.open(recommendation.action_url, "_blank")
-                  }
-                >
-                  Take Action
-                  <ArrowUpRight className="w-3 h-3" />
-                </Button>
-              ) : (
-                <Button size="sm" className="gap-1 text-xs font-semibold">
-                  Review Now
-                </Button>
-              )}
-            </div>
-          </div>
+          )}
         </div>
+      </div>
+
+      {/* Rationale */}
+      <p className="text-base text-zinc-700 dark:text-zinc-300 mb-5 leading-relaxed pl-[4.5rem]">
+        {recommendation.rationale}
+      </p>
+
+      {/* Tags */}
+      <div className="flex items-center flex-wrap gap-2 mb-4 pl-[4.5rem]">
+        {recommendation.membership && (
+          <Badge variant="secondary" className="text-xs">
+            📍 {recommendation.membership}
+          </Badge>
+        )}
+        {recommendation.kind && (
+          <Badge
+            variant={
+              recommendation.kind === "overlap" ? "destructive" : "default"
+            }
+            className="text-xs capitalize"
+          >
+            {recommendation.kind === "overlap" && "⚠️ Duplicate"}
+            {recommendation.kind === "unused" && "💎 Unused Perk"}
+            {recommendation.kind === "switch" && "🔄 Better Option"}
+            {recommendation.kind === "bundle" && "📦 Bundle"}
+            {recommendation.kind === "tip" && "💡 Quick Win"}
+          </Badge>
+        )}
+      </div>
+
+      {/* Footer Actions */}
+      <div className="flex items-center gap-3 pt-4 border-t-2 border-zinc-100 dark:border-zinc-800 pl-[4.5rem]">
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2"
+          onClick={() => setShowDetails(true)}
+        >
+          <Info className="w-4 h-4" />
+          Details
+        </Button>
+        {recommendation.action_url ? (
+          <Button
+            size="sm"
+            className="gap-2 font-semibold"
+            onClick={() => window.open(recommendation.action_url, "_blank")}
+          >
+            Take Action
+            <ArrowUpRight className="w-4 h-4" />
+          </Button>
+        ) : (
+          <Button size="sm" className="gap-2 font-semibold">
+            Review Now
+          </Button>
+        )}
       </div>
 
       {/* Details Dialog */}
       <Dialog open={showDetails} onOpenChange={setShowDetails}>
-        <DialogHeader className="border-b border-zinc-200 dark:border-zinc-800">
-          <DialogTitle>{recommendation.title}</DialogTitle>
-          <DialogClose onClose={() => setShowDetails(false)} />
+        <DialogClose onClose={() => setShowDetails(false)} />
+
+        <DialogHeader>
+          <DialogTitle className="pr-12 text-2xl">
+            {recommendation.title}
+          </DialogTitle>
         </DialogHeader>
 
-        <DialogContent>
-          {/* Saving Info */}
+        <DialogContent className="space-y-6">
+          {/* Saving Info - Large and Clear */}
           {savingText && (
-            <div className="mb-6 p-4 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
-              <div className="font-bold text-green-700 dark:text-green-400 mb-1">
-                💰 Potential Savings
+            <div className="p-6 rounded-2xl bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 dark:from-green-900/30 dark:via-emerald-900/30 dark:to-teal-900/30 border-2 border-green-300 dark:border-green-700">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-12 h-12 rounded-full bg-green-200 dark:bg-green-800 flex items-center justify-center text-2xl">
+                  💰
+                </div>
+                <div className="text-base font-semibold text-green-800 dark:text-green-300">
+                  Potential Savings
+                </div>
               </div>
-              <div className="text-2xl font-bold text-green-900 dark:text-green-300">
+              <div className="text-4xl font-black text-green-900 dark:text-green-200">
                 {savingText}
               </div>
             </div>
           )}
 
-          {/* Rationale */}
-          <div className="mb-6">
-            <h4 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
-              Why this recommendation?
+          {/* Rationale - Clear Section */}
+          <div className="p-5 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700">
+            <h4 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 mb-3 flex items-center gap-2">
+              <span className="text-xl">🤔</span> Why this recommendation?
             </h4>
-            <p className="text-zinc-700 dark:text-zinc-300 leading-relaxed">
+            <p className="text-base text-zinc-700 dark:text-zinc-300 leading-relaxed">
               {recommendation.rationale}
             </p>
           </div>
 
-          {/* Related Benefits */}
+          {/* Related Benefits - Separated and Clear */}
           {benefits.length > 0 && (
-            <div className="mb-4">
-              <h4 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-3">
-                Related Benefits
+            <div>
+              <h4 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 mb-4 flex items-center gap-2">
+                <span className="text-xl">🎁</span> Related Benefits
               </h4>
               <div className="space-y-3">
                 {benefits.map((benefit) => (
                   <div
                     key={benefit.id}
-                    className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700"
+                    className="p-5 rounded-xl bg-white dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 hover:border-primary dark:hover:border-primary transition-all hover:shadow-md"
                   >
-                    <div className="flex items-start justify-between gap-3 mb-2">
-                      <h5 className="font-medium text-zinc-900 dark:text-zinc-100">
+                    <div className="flex items-start justify-between gap-4 mb-3">
+                      <h5 className="font-bold text-base text-zinc-900 dark:text-zinc-100 flex-1">
                         {benefit.title}
                       </h5>
                       {benefit.category && (
-                        <Badge variant="secondary" className="text-xs shrink-0">
-                          {benefit.category}
+                        <Badge
+                          variant="secondary"
+                          className="text-xs shrink-0 capitalize"
+                        >
+                          {benefit.category.replace("_", " ")}
                         </Badge>
                       )}
                     </div>
                     {benefit.description && (
-                      <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-3">
+                      <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4 leading-relaxed">
                         {benefit.description}
                       </p>
                     )}
@@ -239,10 +247,10 @@ export function RecommendationCard({
                         href={benefit.source_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                        className="inline-flex items-center gap-2 text-sm text-primary hover:underline font-semibold"
                       >
                         Learn more
-                        <ExternalLink className="w-3 h-3" />
+                        <ExternalLink className="w-4 h-4" />
                       </a>
                     )}
                   </div>
@@ -252,22 +260,26 @@ export function RecommendationCard({
           )}
 
           {loadingBenefits && (
-            <div className="text-center text-zinc-500 dark:text-zinc-400 py-4">
-              Loading benefit details...
+            <div className="text-center text-zinc-500 dark:text-zinc-400 py-12">
+              <div className="inline-block w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin mb-3" />
+              <p className="text-sm">Loading benefit details...</p>
             </div>
           )}
+        </DialogContent>
 
-          {/* Action Button */}
-          {recommendation.action_url && (
+        {/* Action Button in Footer - Prominent */}
+        {recommendation.action_url && (
+          <div className="px-6 py-5 bg-gradient-to-r from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800 border-t-2 border-zinc-200 dark:border-zinc-700">
             <Button
-              className="w-full gap-2"
+              className="w-full gap-3 text-lg py-7 font-bold shadow-lg hover:shadow-xl"
+              size="lg"
               onClick={() => window.open(recommendation.action_url, "_blank")}
             >
               Take Action
-              <ArrowUpRight className="w-4 h-4" />
+              <ArrowUpRight className="w-6 h-6" />
             </Button>
-          )}
-        </DialogContent>
+          </div>
+        )}
       </Dialog>
     </Card>
   );

@@ -24,15 +24,15 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm animate-fade-in"
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
         onClick={() => onOpenChange(false)}
       />
 
       {/* Dialog */}
-      <div className="relative bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden animate-scale-in">
+      <div className="relative bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl max-w-3xl w-full my-8 animate-scale-in z-10">
         {children}
       </div>
     </div>
@@ -80,7 +80,14 @@ export function DialogContent({
   className?: string;
 }) {
   return (
-    <div className={cn("px-6 py-6 overflow-y-auto", className)}>{children}</div>
+    <div
+      className={cn(
+        "px-6 py-6 overflow-y-auto max-h-[calc(90vh-120px)]",
+        className
+      )}
+    >
+      {children}
+    </div>
   );
 }
 

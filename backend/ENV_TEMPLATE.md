@@ -9,6 +9,12 @@ DATABASE_URL=postgresql://user:password@localhost:5432/vogo
 # OpenAI Configuration
 OPENAI_API_KEY=sk-your-openai-api-key-here
 EMBED_MODEL=text-embedding-3-small
+MODEL_RECO=gpt-4o-mini
+MODEL_EXTRACT=gpt-4o-mini
+
+# Search & AI Configuration
+SEARCH_PROVIDER=duckduckgo
+AI_MAX_PAGES=5
 
 # JWT Authentication Configuration
 JWT_SECRET=your-secret-key-min-32-chars-use-openssl-rand-hex-32
