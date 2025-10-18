@@ -15,10 +15,10 @@ if settings.openai_api_key:
 def infer_metadata_from_url(url: str) -> Dict[str, str]:
     """
     Use LLM to infer page metadata when scraping fails.
-    
+
     Args:
         url: Full URL to analyze
-        
+
     Returns:
         Dictionary with inferred metadata
     """
@@ -28,8 +28,10 @@ def infer_metadata_from_url(url: str) -> Dict[str, str]:
         domain = parsed_url.host or ""
         path = parsed_url.path
         path_parts = path.strip("/").split("/")
-        path_text = " ".join(part.replace("-", " ").replace("_", " ") for part in path_parts if part)
-        
+        path_text = " ".join(
+            part.replace("-", " ").replace("_", " ") for part in path_parts if part
+        )
+
         return {
             "url": url,
             "domain": domain,
@@ -42,9 +44,9 @@ def infer_metadata_from_url(url: str) -> Dict[str, str]:
             "keywords": "",
             "llm_inferred": False,
         }
-    
+
     print(f"      🤖 Using LLM to infer page content from URL...")
-    
+
     prompt = f"""Analyze this URL and infer what the page is about:
 
 URL: {url}
@@ -61,7 +63,7 @@ Be specific and realistic. Example:
 - "amazon.co.uk/books" → title: "Books - Amazon UK", category: "shopping"
 - "rac.co.uk/breakdown-cover" → title: "RAC Breakdown Cover", category: "breakdown cover"
 """
-    
+
     try:
         response = openai_client.chat.completions.create(
             model="gpt-4o-mini",
@@ -70,15 +72,16 @@ Be specific and realistic. Example:
             temperature=0.3,
             max_tokens=200,
         )
-        
+
         import json
+
         result = json.loads(response.choices[0].message.content)
-        
+
         parsed_url = httpx.URL(url)
         domain = parsed_url.host or ""
-        
+
         print(f"      ✅ LLM inferred: {result.get('title', 'N/A')}")
-        
+
         return {
             "url": url,
             "domain": domain,
@@ -92,7 +95,7 @@ Be specific and realistic. Example:
             "category": result.get("category", ""),
             "llm_inferred": True,
         }
-    
+
     except Exception as e:
         print(f"      ❌ LLM inference failed: {str(e)}")
         # Fall back to basic parsing
@@ -100,8 +103,10 @@ Be specific and realistic. Example:
         domain = parsed_url.host or ""
         path = parsed_url.path
         path_parts = path.strip("/").split("/")
-        path_text = " ".join(part.replace("-", " ").replace("_", " ") for part in path_parts if part)
-        
+        path_text = " ".join(
+            part.replace("-", " ").replace("_", " ") for part in path_parts if part
+        )
+
         return {
             "url": url,
             "domain": domain,
@@ -215,7 +220,7 @@ async def scrape_page_metadata(url: str, timeout: int = 10) -> Dict[str, str]:
         # Scraping blocked - use LLM to infer metadata from URL!
         print(f"      ❌ SCRAPING BLOCKED: {type(e).__name__}")
         print(f"      🎯 FALLBACK: Using LLM to infer page content from URL")
-        
+
         # Use LLM to understand what the page is about from the URL
         return infer_metadata_from_url(url)
 

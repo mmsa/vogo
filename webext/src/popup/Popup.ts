@@ -176,13 +176,15 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
     }
 
     const data = await response.json();
-    
+
     console.log("Semantic API Response:", data);
 
     if (!data.has_matches) {
       content.innerHTML = `
         <div style="font-weight:600;font-size:16px;margin-bottom:8px">🔍 No perks for ${hostname}</div>
-        <p style="font-size:13px;color:#666;line-height:1.5">${data.message || "We couldn't find any benefits matching this site."}<br><br>Try <strong>amazon.co.uk</strong>, <strong>booking.com</strong>, or other sites where you have perks!</p>
+        <p style="font-size:13px;color:#666;line-height:1.5">${
+          data.message || "We couldn't find any benefits matching this site."
+        }<br><br>Try <strong>amazon.co.uk</strong>, <strong>booking.com</strong>, or other sites where you have perks!</p>
       `;
       return;
     }
@@ -192,22 +194,34 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
       <div style="text-align:left">
         <div style="background:linear-gradient(135deg,#10b981 0%,#059669 100%);color:white;padding:16px;border-radius:12px;margin-bottom:16px;box-shadow:0 4px 12px rgba(16,185,129,0.3)">
           <div style="font-size:20px;margin-bottom:8px">✨</div>
-          <div style="font-size:15px;font-weight:600;line-height:1.5">${data.message}</div>
+          <div style="font-size:15px;font-weight:600;line-height:1.5">${
+            data.message
+          }</div>
         </div>
         ${
           data.matches && data.matches.length > 0
             ? `
-          <div style="font-size:13px;color:#666;margin-bottom:12px;font-weight:600">Relevant benefits (${data.matches.length}):</div>
+          <div style="font-size:13px;color:#666;margin-bottom:12px;font-weight:600">Relevant benefits (${
+            data.matches.length
+          }):</div>
           ${data.matches
             .slice(0, 3)
             .map(
               (m) => `
             <div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin-bottom:8px;background:#f9fafb">
-              <div style="font-weight:600;font-size:14px;color:#111;margin-bottom:4px">${m.benefit_title}</div>
-              <div style="font-size:12px;color:#666;margin-bottom:6px">${m.benefit_description}</div>
+              <div style="font-weight:600;font-size:14px;color:#111;margin-bottom:4px">${
+                m.benefit_title
+              }</div>
+              <div style="font-size:12px;color:#666;margin-bottom:6px">${
+                m.benefit_description
+              }</div>
               <div style="display:flex;justify-content:space-between;align-items:center">
-                <span style="font-size:11px;color:#667eea;font-weight:600">${m.membership_name}</span>
-                <span style="font-size:11px;background:#d1fae5;color:#059669;padding:4px 8px;border-radius:6px;font-weight:600">${Math.round(m.similarity_score * 100)}% match</span>
+                <span style="font-size:11px;color:#667eea;font-weight:600">${
+                  m.membership_name
+                }</span>
+                <span style="font-size:11px;background:#d1fae5;color:#059669;padding:4px 8px;border-radius:6px;font-weight:600">${Math.round(
+                  m.similarity_score * 100
+                )}% match</span>
               </div>
             </div>
           `
@@ -225,7 +239,8 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
     // Add button handler
     const openBtn = document.getElementById("openAppBtn");
     if (openBtn) {
-      openBtn.onclick = () => chrome.tabs.create({ url: "http://localhost:5173" });
+      openBtn.onclick = () =>
+        chrome.tabs.create({ url: "http://localhost:5173" });
     }
   } catch (e) {
     console.error("Error fetching recommendations:", e);

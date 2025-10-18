@@ -136,7 +136,7 @@ async def find_semantic_matches(
                     "similarity_score": round(similarity, 3),
                 }
             )
-    
+
     # Debug: Print top 5 scores
     all_scores.sort(reverse=True)
     print(f"\n🔍 Top 5 similarity scores for {page_metadata.get('domain')}:")

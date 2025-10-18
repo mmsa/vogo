@@ -50,7 +50,7 @@ async def check_semantic(
 
         if metadata.get("llm_inferred"):
             print(f"   🤖 Used LLM to infer content (scraping blocked)")
-        
+
         print(
             f"   📊 Page: {metadata.get('domain')} - {metadata.get('title', 'No title')}"
         )
