@@ -149,20 +149,20 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
     return;
   }
 
-  // Fetch recommendations DIRECTLY
+  // Fetch recommendations DIRECTLY using SEMANTIC API
   try {
     content.innerHTML = `
-      <div style="color:#667eea;font-weight:600;margin-bottom:8px">⏳ Calling API...</div>
+      <div style="color:#667eea;font-weight:600;margin-bottom:8px">⏳ Analyzing page...</div>
       <div style="font-size:13px;color:#666">${hostname}</div>
     `;
 
-    const response = await fetch(apiBase + "/api/ai/recommendations", {
+    const response = await fetch(apiBase + "/api/check-semantic", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: "Bearer " + accessToken,
       },
-      body: JSON.stringify({ domain: hostname }),
+      body: JSON.stringify({ url: tab.url }),
     });
 
     console.log("API Response:", response.status);
@@ -176,109 +176,62 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
     }
 
     const data = await response.json();
-    const recs = data?.recommendations || [];
+    
+    console.log("Semantic API Response:", data);
 
-    console.log("Recommendations:", recs.length);
-
-    if (recs.length === 0) {
+    if (!data.has_matches) {
       content.innerHTML = `
         <div style="font-weight:600;font-size:16px;margin-bottom:8px">🔍 No perks for ${hostname}</div>
-        <p style="font-size:13px;color:#666;line-height:1.5">We couldn't find any benefits matching this site.<br><br>Try <strong>amazon.co.uk</strong>, <strong>booking.com</strong>, or other sites where you have perks!</p>
+        <p style="font-size:13px;color:#666;line-height:1.5">${data.message || "We couldn't find any benefits matching this site."}<br><br>Try <strong>amazon.co.uk</strong>, <strong>booking.com</strong>, or other sites where you have perks!</p>
       `;
       return;
     }
 
-    // Render recommendations with proper event listeners
-    const cards = recs
-      .slice(0, 3)
-      .map((rec, idx) => {
-        const kindColors = {
-          tip: "background:#d1fae5;color:#059669",
-          overlap: "background:#fee2e2;color:#dc2626",
-          unused: "background:#fffbeb;color:#f59e0b",
-          switch: "background:#e0e7ff;color:#4f46e5",
-          bundle: "background:#dbeafe;color:#2563eb",
-        };
-        const kindStyle =
-          kindColors[rec.kind as keyof typeof kindColors] ||
-          "background:#f3f4f6;color:#666";
-
-        return `
-        <div style="border:2px solid #e5e7eb;border-radius:12px;padding:14px;margin-bottom:10px;background:white;transition:all 0.2s;cursor:pointer" class="rec-card" data-idx="${idx}">
-          <div style="display:flex;align-items:start;gap:12px;margin-bottom:10px">
-            <div style="font-size:24px;line-height:1">${
-              rec.kind === "tip"
-                ? "✨"
-                : rec.kind === "overlap"
-                ? "⚠️"
-                : rec.kind === "unused"
-                ? "💡"
-                : "🎯"
-            }</div>
-            <div style="flex:1">
-              <div style="font-weight:700;font-size:15px;margin-bottom:4px;color:#111">${
-                rec.title
-              }</div>
-              <span style="font-size:11px;font-weight:600;padding:3px 8px;border-radius:6px;${kindStyle};text-transform:uppercase;letter-spacing:0.5px">${
-          rec.kind
-        }</span>
-            </div>
-          </div>
-          <div style="font-size:13px;color:#555;line-height:1.5;margin-bottom:12px">${
-            rec.rationale
-          }</div>
-          <button class="action-btn" data-idx="${idx}" data-url="${
-          rec.action_url || ""
-        }" style="background:#667eea;color:white;border:none;padding:10px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;width:100%;transition:all 0.2s;box-shadow:0 2px 4px rgba(102,126,234,0.2)">
-            ${rec.action_url ? "🎯 Take Action" : "✓ View Details"}
-          </button>
-        </div>
-      `;
-      })
-      .join("");
-
+    // Show the AI-generated message
     content.innerHTML = `
       <div style="text-align:left">
-        <div style="font-weight:700;margin-bottom:16px;font-size:18px;color:#111;display:flex;align-items:center;gap:8px">
-          <span>💰</span>
-          <span>${recs.length} Way${recs.length > 1 ? "s" : ""} to Save</span>
+        <div style="background:linear-gradient(135deg,#10b981 0%,#059669 100%);color:white;padding:16px;border-radius:12px;margin-bottom:16px;box-shadow:0 4px 12px rgba(16,185,129,0.3)">
+          <div style="font-size:20px;margin-bottom:8px">✨</div>
+          <div style="font-size:15px;font-weight:600;line-height:1.5">${data.message}</div>
         </div>
-        ${cards}
+        ${
+          data.matches && data.matches.length > 0
+            ? `
+          <div style="font-size:13px;color:#666;margin-bottom:12px;font-weight:600">Relevant benefits (${data.matches.length}):</div>
+          ${data.matches
+            .slice(0, 3)
+            .map(
+              (m) => `
+            <div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin-bottom:8px;background:#f9fafb">
+              <div style="font-weight:600;font-size:14px;color:#111;margin-bottom:4px">${m.benefit_title}</div>
+              <div style="font-size:12px;color:#666;margin-bottom:6px">${m.benefit_description}</div>
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <span style="font-size:11px;color:#667eea;font-weight:600">${m.membership_name}</span>
+                <span style="font-size:11px;background:#d1fae5;color:#059669;padding:4px 8px;border-radius:6px;font-weight:600">${Math.round(m.similarity_score * 100)}% match</span>
+              </div>
+            </div>
+          `
+            )
+            .join("")}
+        `
+            : ""
+        }
+        <button id="openAppBtn" style="background:#667eea;color:white;border:none;padding:12px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;width:100%;margin-top:8px;transition:all 0.2s;box-shadow:0 2px 6px rgba(102,126,234,0.3)">
+          🚀 View Full Dashboard
+        </button>
       </div>
     `;
 
-    // Attach event listeners properly (no inline onclick!)
-    recs.slice(0, 3).forEach((rec, idx) => {
-      const btn = content.querySelector(
-        `[data-idx="${idx}"].action-btn`
-      ) as HTMLButtonElement;
-      if (btn) {
-        btn.onclick = (e) => {
-          e.stopPropagation();
-          const url = rec.action_url || "http://localhost:5173/recommendations";
-          chrome.tabs.create({ url });
-        };
-
-        // Hover effect
-        btn.onmouseenter = () => {
-          btn.style.background = "#5a67d8";
-          btn.style.transform = "translateY(-2px)";
-          btn.style.boxShadow = "0 4px 8px rgba(102,126,234,0.3)";
-        };
-        btn.onmouseleave = () => {
-          btn.style.background = "#667eea";
-          btn.style.transform = "translateY(0)";
-          btn.style.boxShadow = "0 2px 4px rgba(102,126,234,0.2)";
-        };
-      }
-    });
+    // Add button handler
+    const openBtn = document.getElementById("openAppBtn");
+    if (openBtn) {
+      openBtn.onclick = () => chrome.tabs.create({ url: "http://localhost:5173" });
+    }
   } catch (e) {
-    console.error("Error:", e);
+    console.error("Error fetching recommendations:", e);
     content.innerHTML = `
-      <div style="color:#dc2626;font-weight:600;margin-bottom:8px">❌ Error</div>
-      <div style="font-size:12px;color:#666;word-break:break-word">${String(
-        e
-      )}</div>
+      <div style="color:#dc2626;font-weight:600">❌ Connection Error</div>
+      <div style="font-size:13px;color:#666;margin-top:8px">Could not reach the server. Make sure the backend is running on port 8000.</div>
     `;
   }
 });
