@@ -118,11 +118,13 @@ async def find_semantic_matches(
 
     # Calculate similarities
     matches = []
+    all_scores = []  # For debugging
     for benefit, membership in user_benefits:
         benefit_text = create_benefit_text(benefit, membership)
         benefit_embedding = get_embedding(benefit_text)
 
         similarity = cosine_similarity(page_embedding, benefit_embedding)
+        all_scores.append((similarity, benefit.title, membership.name))
 
         if similarity >= threshold:
             matches.append(
@@ -134,6 +136,12 @@ async def find_semantic_matches(
                     "similarity_score": round(similarity, 3),
                 }
             )
+    
+    # Debug: Print top 5 scores
+    all_scores.sort(reverse=True)
+    print(f"\n🔍 Top 5 similarity scores for {page_metadata.get('domain')}:")
+    for score, title, membership in all_scores[:5]:
+        print(f"   {score:.3f} - {title[:40]} ({membership})")
 
     # Sort by similarity and take top K
     matches.sort(key=lambda x: x["similarity_score"], reverse=True)

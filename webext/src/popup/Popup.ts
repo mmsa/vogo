@@ -42,12 +42,10 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
         <p style="font-size:13px;color:#666;margin-bottom:16px">Enter your VogPlus credentials</p>
         
         <input type="email" id="loginEmail" placeholder="Email" 
-          style="width:100%;padding:12px;border:2px solid #e5e7eb;border-radius:8px;font-size:14px;margin-bottom:10px;box-sizing:border-box;transition:border 0.2s"
-          onfocus="this.style.borderColor='#667eea'" onblur="this.style.borderColor='#e5e7eb'">
+          style="width:100%;padding:12px;border:2px solid #e5e7eb;border-radius:8px;font-size:14px;margin-bottom:10px;box-sizing:border-box;transition:border 0.2s">
         
         <input type="password" id="loginPassword" placeholder="Password"
-          style="width:100%;padding:12px;border:2px solid #e5e7eb;border-radius:8px;font-size:14px;margin-bottom:10px;box-sizing:border-box;transition:border 0.2s"
-          onfocus="this.style.borderColor='#667eea'" onblur="this.style.borderColor='#e5e7eb'">
+          style="width:100%;padding:12px;border:2px solid #e5e7eb;border-radius:8px;font-size:14px;margin-bottom:10px;box-sizing:border-box;transition:border 0.2s">
         
         <div id="loginError" style="color:#dc2626;font-size:13px;margin-bottom:10px;display:none;font-weight:600"></div>
         
@@ -75,6 +73,12 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
     const openAppBtn = document.getElementById(
       "openAppBtn"
     ) as HTMLButtonElement;
+
+    // Add focus/blur handlers
+    emailInput.onfocus = () => (emailInput.style.borderColor = "#667eea");
+    emailInput.onblur = () => (emailInput.style.borderColor = "#e5e7eb");
+    passwordInput.onfocus = () => (passwordInput.style.borderColor = "#667eea");
+    passwordInput.onblur = () => (passwordInput.style.borderColor = "#e5e7eb");
 
     // Login handler
     loginBtn.onclick = async () => {
