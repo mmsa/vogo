@@ -16,13 +16,16 @@ async def scrape_page_metadata(url: str, timeout: int = 10) -> Dict[str, str]:
     Returns:
         Dictionary with page metadata
     """
+    print(f"      🌐 Scraping: {url}")
     try:
         async with httpx.AsyncClient(
             follow_redirects=True,
             timeout=timeout,
             headers={"User-Agent": "VogPlus/1.0 (Benefits Matcher)"},
         ) as client:
+            print(f"      📡 Sending HTTP request...")
             response = await client.get(url)
+            print(f"      ✅ Got response: {response.status_code}")
             response.raise_for_status()
 
             soup = BeautifulSoup(response.text, "html.parser")
@@ -79,10 +82,12 @@ async def scrape_page_metadata(url: str, timeout: int = 10) -> Dict[str, str]:
                     content_parts.append(text)
             metadata["content_snippet"] = " ".join(content_parts)[:500]
 
+            print(f"      ✅ Extracted: title={metadata.get('title', 'N/A')[:50]}")
             return metadata
 
     except Exception as e:
         # Return minimal metadata on error
+        print(f"      ❌ SCRAPING ERROR: {type(e).__name__}: {str(e)}")
         return {
             "url": url,
             "domain": httpx.URL(url).host or "",
