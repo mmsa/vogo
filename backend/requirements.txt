@@ -18,6 +18,7 @@ duckduckgo-search==3.9.6
 rapidfuzz==3.5.2
 orjson==3.9.10
 cachetools==5.3.2
+numpy==1.26.2  # For semantic matching
 
 # Auth dependencies
 passlib[bcrypt]==1.7.4

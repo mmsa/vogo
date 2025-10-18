@@ -11,6 +11,7 @@ from app.api import (
     user_memberships,
     recommendations,
     check,
+    check_semantic,
     llm,
     benefits,
     ai,
@@ -30,6 +31,7 @@ api_router.include_router(memberships_validate.router)
 api_router.include_router(user_memberships.router)
 api_router.include_router(recommendations.router)
 api_router.include_router(check.router)
+api_router.include_router(check_semantic.router)  # Semantic matching
 api_router.include_router(llm.router)
 api_router.include_router(benefits.router)
 
