@@ -128,10 +128,10 @@ async def find_semantic_matches(
             matches.append(
                 {
                     "benefit_id": benefit.id,
-                    "benefit": benefit,
-                    "membership": membership,
+                    "benefit_title": benefit.title,
+                    "benefit_description": benefit.description or "",
+                    "membership_name": membership.name,
                     "similarity_score": round(similarity, 3),
-                    "benefit_text": benefit_text,
                 }
             )
 
@@ -177,9 +177,9 @@ async def generate_user_message(
         },
         "matches": [
             {
-                "membership": m["membership"].name,
-                "benefit": m["benefit"].title,
-                "description": m["benefit"].description or "",
+                "membership": m["membership_name"],
+                "benefit": m["benefit_title"],
+                "description": m["benefit_description"],
                 "score": m["similarity_score"],
             }
             for m in semantic_matches
@@ -252,7 +252,7 @@ Be specific and actionable. Focus on the TOP matching benefit.
         top_match = semantic_matches[0]
         return {
             "has_matches": True,
-            "message": f"You have {top_match['benefit'].title} from your {top_match['membership'].name} that works on this site!",
+            "message": f"You have {top_match['benefit_title']} from your {top_match['membership_name']} that works on this site!",
             "action": "View Benefits",
             "highlight_benefit_ids": [top_match["benefit_id"]],
             "matches": semantic_matches,
