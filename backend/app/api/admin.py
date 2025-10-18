@@ -6,12 +6,51 @@ from sqlalchemy import or_
 
 from app.core.db import get_db
 from app.core.auth import get_current_user, require_role
-from app.models import User, Benefit, Membership
+from app.models import User, Benefit, Membership, UserMembership
 from app.schemas import UserRead, AdminUserUpdate, UserListResponse
 import json
 from pathlib import Path
+from datetime import datetime, timedelta
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
+
+
+@router.get("/stats")
+def get_admin_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("admin")),
+):
+    """Get platform statistics for admin dashboard."""
+    total_users = db.query(User).count()
+    active_users = db.query(User).filter(User.is_active == True).count()
+    total_memberships = db.query(Membership).count()
+    total_benefits = db.query(Benefit).count()
+    approved_benefits = db.query(Benefit).filter(Benefit.validation_status == "approved").count()
+    pending_benefits = db.query(Benefit).filter(Benefit.validation_status == "pending").count()
+    
+    # Recent users (last 7 days)
+    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    recent_users = db.query(User).filter(User.created_at >= seven_days_ago).count()
+    
+    # User memberships count
+    user_memberships_count = db.query(UserMembership).count()
+    
+    return {
+        "users": {
+            "total": total_users,
+            "active": active_users,
+            "recent": recent_users,
+        },
+        "memberships": {
+            "total": total_memberships,
+            "user_subscriptions": user_memberships_count,
+        },
+        "benefits": {
+            "total": total_benefits,
+            "approved": approved_benefits,
+            "pending": pending_benefits,
+        },
+    }
 
 
 @router.get(
@@ -55,7 +94,6 @@ def list_users(
 
 @router.get(
     "/users/{user_id}",
-    response_model=UserRead,
     dependencies=[Depends(require_role("admin"))],
 )
 def get_user(
@@ -63,14 +101,44 @@ def get_user(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Get user by ID (admin only)."""
+    """Get detailed user information including memberships and benefits (admin only)."""
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
-    return user
+    
+    # Get user memberships
+    user_memberships = db.query(UserMembership, Membership).join(
+        Membership, UserMembership.membership_id == Membership.id
+    ).filter(UserMembership.user_id == user_id).all()
+    
+    # Get benefits count
+    membership_ids = [um.membership_id for um, _ in user_memberships]
+    benefits_count = db.query(Benefit).filter(
+        Benefit.membership_id.in_(membership_ids) if membership_ids else False,
+        Benefit.validation_status == "approved"
+    ).count()
+    
+    return {
+        "id": user.id,
+        "email": user.email,
+        "role": user.role,
+        "is_active": user.is_active,
+        "created_at": user.created_at.isoformat() if user.created_at else None,
+        "memberships": [
+            {
+                "id": membership.id,
+                "name": membership.name,
+                "provider_name": membership.provider_name,
+                "plan_name": membership.plan_name,
+            }
+            for _, membership in user_memberships
+        ],
+        "memberships_count": len(user_memberships),
+        "benefits_count": benefits_count,
+    }
 
 
 @router.patch(

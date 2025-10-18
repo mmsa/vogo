@@ -17,7 +17,7 @@ import { Badge } from "./ui/Badge";
 import { useAuth } from "@/store/auth";
 import { cn } from "@/lib/utils";
 
-const navItems = [
+const baseNavItems = [
   { path: "/", label: "Dashboard", icon: LayoutDashboard },
   { path: "/memberships", label: "Memberships", icon: CreditCard },
   { path: "/benefits", label: "Benefits", icon: Gift },
@@ -29,6 +29,11 @@ export function AppHeader() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  
+  // Add admin link for admin users
+  const navItems = user?.role === 'admin' 
+    ? [...baseNavItems, { path: "/admin", label: "Admin", icon: Shield }]
+    : baseNavItems;
 
   const handleLogout = () => {
     logout();
