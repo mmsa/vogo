@@ -15,6 +15,7 @@ from app.api import (
     llm,
     benefits,
     ai,
+    chat,
 )
 
 api_router = APIRouter()
@@ -37,3 +38,4 @@ api_router.include_router(benefits.router)
 
 # AI Services
 api_router.include_router(ai.router)
+api_router.include_router(chat.router)
