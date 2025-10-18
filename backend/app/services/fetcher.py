@@ -18,7 +18,7 @@ def fetch_pages(urls: List[str], timeout: int = 10) -> List[Dict[str, str]]:
     results = []
     
     headers = {
-        "User-Agent": "Mozilla/5.0 (compatible; VogoBot/1.0; +https://vogo.com/bot)"
+        "User-Agent": "Mozilla/5.0 (compatible; VogPlus.ai Bot/1.0; +https://vogplus.ai/bot)"
     }
     
     for url in urls:

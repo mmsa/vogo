@@ -4,7 +4,7 @@ const root = document.getElementById("app")!;
 root.innerHTML = `
   <div style="font-family:sans-serif;padding:16px;width:380px;background:#f8fafc">
     <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;padding:20px;border-radius:16px;margin-bottom:16px;box-shadow:0 4px 12px rgba(102,126,234,0.3)">
-      <div style="font-size:22px;font-weight:700;margin-bottom:4px">💎 VogPlus</div>
+      <div style="font-size:22px;font-weight:700;margin-bottom:4px">💎 VogPlus.ai</div>
       <div style="font-size:14px;opacity:0.95" id="subtitle">Loading...</div>
     </div>
     <div id="content" style="text-align:center;padding:20px;background:white;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.05)">
@@ -39,7 +39,7 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
     content.innerHTML = `
       <div style="text-align:left">
         <div style="color:#111;font-weight:700;font-size:18px;margin-bottom:8px">🔐 Sign in</div>
-        <p style="font-size:13px;color:#666;margin-bottom:16px">Enter your VogPlus credentials</p>
+        <p style="font-size:13px;color:#666;margin-bottom:16px">Enter your VogPlus.ai credentials</p>
         
         <input type="email" id="loginEmail" placeholder="Email" 
           style="width:100%;padding:12px;border:2px solid #e5e7eb;border-radius:8px;font-size:14px;margin-bottom:10px;box-sizing:border-box;transition:border 0.2s">

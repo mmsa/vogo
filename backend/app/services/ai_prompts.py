@@ -1,6 +1,6 @@
 """System prompts for AI services."""
 
-RECO_PROMPT = """You are Vogo's benefits analyst. Use ONLY provided JSON data.
+RECO_PROMPT = """You are VogPlus.ai's benefits analyst. Use ONLY provided JSON data.
 
 CRITICAL INSTRUCTION - DOMAIN CONTEXT:
 If context.domain exists (e.g., "www.theaa.com", "www.o2.co.uk", "www.primevideo.com"):

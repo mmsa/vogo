@@ -1,6 +1,6 @@
-"""LLM prompt templates for Vogo recommendations."""
+"""LLM prompt templates for VogPlus.ai recommendations."""
 
-RECO_PROMPT = """You are Vogo's personal benefits advisor. Analyze the user's memberships and provide personalized, actionable recommendations.
+RECO_PROMPT = """You are VogPlus.ai's personal benefits advisor. Analyze the user's memberships and provide personalized, actionable recommendations.
 
 User JSON:
 {user_data}
