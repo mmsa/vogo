@@ -1,4 +1,5 @@
 const root = document.getElementById("app")!;
+let currentHostname = "";
 
 root.innerHTML = `
   <div class="wrap">
@@ -7,33 +8,62 @@ root.innerHTML = `
       <span id="domain" class="chip"></span>
     </div>
     <div id="auth"></div>
-    <div id="results" class="list"></div>
+    <div id="results" class="list">
+      <div class="muted">Loading...</div>
+    </div>
   </div>
 `;
 
-// Get current tab domain
-chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
+// Get current tab domain and fetch recommendations
+chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
   const domainEl = document.getElementById("domain")!;
   if (tab?.url) {
     try {
-      domainEl.textContent = new URL(tab.url).hostname;
+      currentHostname = new URL(tab.url).hostname;
+      domainEl.textContent = currentHostname;
+      await loadRecommendations();
     } catch {
       domainEl.textContent = "Invalid URL";
+      showError("Invalid URL");
     }
   } else {
     domainEl.textContent = "No tab";
+    showError("No active tab");
   }
 });
 
-// Listen for recommendations
+// Listen for updates from service worker
 chrome.runtime.onMessage.addListener((msg) => {
-  if (msg.type === "RECS") {
-    render(msg.data);
-  } else if (msg.type === "RECS_ERROR") {
-    const list = document.getElementById("results")!;
-    list.innerHTML = `<div class="muted error">Error: ${msg.error}</div>`;
+  if (msg.type === "RECS_UPDATED") {
+    loadRecommendations();
   }
 });
+
+// Load recommendations from storage
+async function loadRecommendations() {
+  try {
+    // Request latest data from service worker
+    const response = await chrome.runtime.sendMessage({ 
+      type: "GET_RECS", 
+      hostname: currentHostname 
+    });
+
+    if (response?.error) {
+      showError(response.error);
+    } else if (response?.data) {
+      render(response.data);
+    } else {
+      showError("No recommendations available yet. Refresh the page.");
+    }
+  } catch (e) {
+    showError("Failed to load recommendations: " + String(e));
+  }
+}
+
+function showError(message: string) {
+  const list = document.getElementById("results")!;
+  list.innerHTML = `<div class="muted error">${message}</div>`;
+}
 
 function render(data: any) {
   const list = document.getElementById("results")!;

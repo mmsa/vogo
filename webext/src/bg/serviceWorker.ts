@@ -1,10 +1,25 @@
 import { gs, ss } from "../lib/storage";
 
 const CACHE = "domainCache";
+const LAST_RECS = "lastRecs";
 
-chrome.runtime.onMessage.addListener(async (msg) => {
-  if (msg?.type !== "PAGE_CONTEXT") return;
+// Handle messages from content script
+chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
+  if (msg?.type === "PAGE_CONTEXT") {
+    // Process in background, don't block
+    handlePageContext(msg);
+    return true;
+  }
+  
+  // Handle popup requests for recommendations
+  if (msg?.type === "GET_RECS") {
+    const lastRecs = await gs<any>(LAST_RECS, "local");
+    sendResponse(lastRecs || { hostname: msg.hostname, data: null, error: null });
+    return true;
+  }
+});
 
+async function handlePageContext(msg: any) {
   const { hostname, isCheckout } = msg;
   const cache = (await gs<Record<string, any>>(CACHE, "local")) || {};
   const cached = cache[hostname];
@@ -12,17 +27,24 @@ chrome.runtime.onMessage.addListener(async (msg) => {
 
   // Check cache (10 min TTL)
   if (cached && now - cached.ts < 10 * 60 * 1000) {
-    chrome.runtime.sendMessage({
-      type: "RECS",
-      hostname,
-      data: cached.data
-    });
+    await ss(LAST_RECS, { hostname, data: cached.data, error: null }, "local");
+    notifyPopup();
     return;
   }
 
   // Fetch fresh recommendations
   const apiBase = (await gs<string>("apiBase")) || "http://localhost:8000";
   const token = await gs<string>("accessToken");
+
+  if (!token) {
+    await ss(LAST_RECS, { 
+      hostname, 
+      data: null, 
+      error: "Not authenticated. Please set your token in Options." 
+    }, "local");
+    notifyPopup();
+    return;
+  }
 
   try {
     const r = await fetch(apiBase + "/api/ai/recommendations", {
@@ -34,7 +56,9 @@ chrome.runtime.onMessage.addListener(async (msg) => {
       body: JSON.stringify({ domain: hostname })
     });
 
-    if (!r.ok) throw new Error(String(r.status));
+    if (!r.ok) {
+      throw new Error(r.status === 401 ? "Authentication failed" : `HTTP ${r.status}`);
+    }
 
     const data = await r.json();
 
@@ -42,12 +66,9 @@ chrome.runtime.onMessage.addListener(async (msg) => {
     cache[hostname] = { ts: now, data };
     await ss(CACHE, cache, "local");
 
-    // Send to popup
-    chrome.runtime.sendMessage({
-      type: "RECS",
-      hostname,
-      data
-    });
+    // Store for popup
+    await ss(LAST_RECS, { hostname, data, error: null }, "local");
+    notifyPopup();
 
     // Auto-open on checkout if enabled
     const autoOpen = await gs<boolean>("autoOpen");
@@ -55,16 +76,27 @@ chrome.runtime.onMessage.addListener(async (msg) => {
       try {
         await chrome.action.openPopup();
       } catch (e) {
-        // Popup can only be opened on user interaction in some cases
         console.log("Could not auto-open popup:", e);
       }
     }
   } catch (e) {
-    chrome.runtime.sendMessage({
-      type: "RECS_ERROR",
-      hostname,
-      error: String(e)
-    });
+    await ss(LAST_RECS, { 
+      hostname, 
+      data: null, 
+      error: String(e) 
+    }, "local");
+    notifyPopup();
   }
-});
+}
+
+// Safely notify popup if it's open
+function notifyPopup() {
+  try {
+    chrome.runtime.sendMessage({ type: "RECS_UPDATED" }).catch(() => {
+      // Popup not open, that's fine
+    });
+  } catch {
+    // Extension context invalidated or popup not open
+  }
+}
 
