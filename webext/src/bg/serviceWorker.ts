@@ -42,16 +42,21 @@ async function handlePageContext(msg: any) {
   const token = await gs<string>("accessToken");
 
   console.log("  📡 Fetching fresh data from", apiBase);
-  console.log("  🔑 Token:", token ? "present" : "missing");
+  console.log("  🔑 Token:", token ? `present (${token.substring(0, 20)}...)` : "MISSING");
+  
+  // DEBUG: Check all storage
+  const allSync = await chrome.storage.sync.get(null);
+  console.log("  🗄️  All sync storage keys:", Object.keys(allSync));
 
   if (!token) {
-    console.error("  ❌ No token!");
+    console.error("  ❌ No token in storage!");
+    console.error("  💡 User needs to log in via the extension popup");
     await ss(
       LAST_RECS,
       {
         hostname,
         data: null,
-        error: "Not authenticated. Please set your token in Options.",
+        error: "Not authenticated. Please log in via the extension popup.",
       },
       "local"
     );

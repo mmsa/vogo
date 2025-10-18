@@ -121,6 +121,11 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
           apiBase: apiBase,
         });
 
+        console.log("✅ Token saved, reloading popup...");
+        
+        // Small delay to ensure storage is persisted
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         // Reload popup to show recommendations
         location.reload();
       } catch (e) {
