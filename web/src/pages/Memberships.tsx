@@ -2,13 +2,13 @@ import { useState, useEffect, useMemo } from "react";
 import { Plus, Search, Filter, Sparkles, AlertCircle, CheckCircle } from "lucide-react";
 import { 
   api, 
-  CURRENT_USER_ID, 
   Membership, 
   Benefit, 
   SmartAddOut,
   ValidateMembershipResponse,
   DiscoverMembershipResponse 
 } from "@/lib/api";
+import { useAuth } from "@/store/auth";
 import { SectionHeader } from "@/components/SectionHeader";
 import { MembershipCard } from "@/components/MembershipCard";
 import { Button } from "@/components/ui/Button";
@@ -36,6 +36,7 @@ const CATEGORIES = [
 ];
 
 export default function Memberships() {
+  const { user } = useAuth();
   const [memberships, setMemberships] = useState<Membership[]>([]);
   const [userMembershipIds, setUserMembershipIds] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,16 +64,20 @@ export default function Memberships() {
   const [modalSearchTerm, setModalSearchTerm] = useState("");
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (user?.id) {
+      loadData();
+    }
+  }, [user?.id]);
 
   const loadData = async () => {
+    if (!user?.id) return;
+    
     try {
       setLoading(true);
       // Load all memberships and user's memberships
       const [allMemberships, userBenefits] = await Promise.all([
         api.getMemberships(),
-        api.getUserBenefits(CURRENT_USER_ID),
+        api.getUserBenefits(user.id),
       ]);
 
       setMemberships(allMemberships);
@@ -94,7 +99,7 @@ export default function Memberships() {
       setAdding(true);
       await Promise.all(
         selectedMemberships.map((membershipId) =>
-          api.addUserMembership(CURRENT_USER_ID, membershipId)
+          api.addUserMembership(user.id, membershipId)
         )
       );
       setShowModal(false);
@@ -125,7 +130,7 @@ export default function Memberships() {
     setCheckingMembership(id);
     try {
       const check = await api.smartAddCheck({
-        user_id: CURRENT_USER_ID,
+        user_id: user.id,
         candidate_membership_slug: membership.provider_slug,
       });
 
@@ -162,7 +167,7 @@ export default function Memberships() {
   const handleRemoveMembership = async (membershipId: number) => {
     try {
       setRemovingMembership(membershipId);
-      await api.removeUserMembership(CURRENT_USER_ID, membershipId);
+      await api.removeUserMembership(user.id, membershipId);
       // Reload data to reflect removal
       await loadData();
       // Clear caches for recommendations
@@ -187,7 +192,7 @@ export default function Memberships() {
       setDiscoveryResult(null);
       
       const result = await api.validateMembershipName({
-        user_id: CURRENT_USER_ID,
+        user_id: user.id,
         name: newMembershipName.trim()
       });
       
@@ -222,7 +227,7 @@ export default function Memberships() {
       setDiscovering(true);
       
       const result = await api.discoverMembership({
-        user_id: CURRENT_USER_ID,
+        user_id: user.id,
         name: nameToUse
       });
       

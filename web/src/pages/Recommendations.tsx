@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Sparkles, Lightbulb, Plus, Loader2 } from "lucide-react";
-import { api, CURRENT_USER_ID, Recommendation, Benefit } from "@/lib/api";
+import { api, Recommendation, Benefit } from "@/lib/api";
+import { useAuth } from "@/store/auth";
 import { RecommendationCard } from "@/components/RecommendationCard";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -10,6 +11,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { Switch } from "@/components/ui/Switch";
 
 export default function Recommendations() {
+  const { user } = useAuth();
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [relevantBenefits, setRelevantBenefits] = useState<Benefit[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,10 +37,14 @@ export default function Recommendations() {
   });
 
   useEffect(() => {
-    loadRecommendations();
-  }, [aiMode]);
+    if (user?.id) {
+      loadRecommendations();
+    }
+  }, [aiMode, user?.id]);
 
   const loadRecommendations = async () => {
+    if (!user?.id) return;
+    
     try {
       setLoading(true);
       if (aiMode) {
@@ -51,7 +57,7 @@ export default function Recommendations() {
         }
         // Use LLM-powered recommendations
         const data = await api.getLLMRecommendations({
-          user_id: CURRENT_USER_ID,
+          user_id: user.id,
         });
         setRecommendations(data.recommendations);
         setRelevantBenefits(data.relevant_benefits);
@@ -71,7 +77,7 @@ export default function Recommendations() {
           return;
         }
         // Use rule-based recommendations
-        const data = await api.getRecommendations(CURRENT_USER_ID);
+        const data = await api.getRecommendations(user.id);
         setRecommendations(data);
         setRelevantBenefits([]);
         setCachedRuleBased(data);

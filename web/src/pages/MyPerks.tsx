@@ -17,13 +17,13 @@ import {
 } from "lucide-react";
 import { 
   api, 
-  CURRENT_USER_ID, 
   Membership, 
   Benefit,
   SmartAddOut,
   ValidateMembershipResponse,
   DiscoverMembershipResponse 
 } from "@/lib/api";
+import { useAuth } from "@/store/auth";
 import { SectionHeader } from "@/components/SectionHeader";
 import { BenefitCard } from "@/components/BenefitCard";
 import { Button } from "@/components/ui/Button";
@@ -60,6 +60,7 @@ interface MembershipWithBenefits extends Membership {
 }
 
 export default function MyPerks() {
+  const { user } = useAuth();
   const [memberships, setMemberships] = useState<Membership[]>([]);
   const [benefits, setBenefits] = useState<Benefit[]>([]);
   const [userMembershipIds, setUserMembershipIds] = useState<number[]>([]);
@@ -84,15 +85,19 @@ export default function MyPerks() {
   const [checkingMembership, setCheckingMembership] = useState<number | null>(null);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (user?.id) {
+      loadData();
+    }
+  }, [user?.id]);
 
   const loadData = async () => {
+    if (!user?.id) return;
+    
     try {
       setLoading(true);
       const [allMemberships, userBenefits] = await Promise.all([
         api.getMemberships(),
-        api.getUserBenefits(CURRENT_USER_ID),
+        api.getUserBenefits(user.id),
       ]);
 
       setMemberships(allMemberships);
@@ -197,7 +202,7 @@ export default function MyPerks() {
   const handleRemoveMembership = async (membershipId: number) => {
     try {
       setRemovingMembership(membershipId);
-      await api.removeUserMembership(CURRENT_USER_ID, membershipId);
+      await api.removeUserMembership(user.id, membershipId);
       await loadData();
       localStorage.removeItem("vogo_cache_ai");
       localStorage.removeItem("vogo_cache_rule");
@@ -213,7 +218,7 @@ export default function MyPerks() {
       setAdding(true);
       await Promise.all(
         selectedMemberships.map((membershipId) =>
-          api.addUserMembership(CURRENT_USER_ID, membershipId)
+          api.addUserMembership(user.id, membershipId)
         )
       );
       setShowModal(false);
@@ -239,7 +244,7 @@ export default function MyPerks() {
     setCheckingMembership(id);
     try {
       const check = await api.smartAddCheck({
-        user_id: CURRENT_USER_ID,
+        user_id: user.id,
         candidate_membership_slug: membership.provider_slug,
       });
 
@@ -265,7 +270,7 @@ export default function MyPerks() {
       setDiscoveryResult(null);
       
       const result = await api.validateMembershipName({
-        user_id: CURRENT_USER_ID,
+        user_id: user.id,
         name: newMembershipName.trim()
       });
       
@@ -298,7 +303,7 @@ export default function MyPerks() {
       setDiscovering(true);
       
       const result = await api.discoverMembership({
-        user_id: CURRENT_USER_ID,
+        user_id: user.id,
         name: nameToUse
       });
       

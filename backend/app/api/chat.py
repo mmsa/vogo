@@ -13,7 +13,7 @@ from app.models.benefit import Benefit
 from app.models.user_membership import UserMembership
 
 
-router = APIRouter(prefix="/chat", tags=["chat"])
+router = APIRouter(prefix="/api/chat", tags=["chat"])
 
 
 @router.post("/", response_model=ChatResponse)
