@@ -61,11 +61,12 @@ async def chat(
             related_benefits=[]
         )
     
-    # Generate response
+    # Generate response (now with intelligent upgrade detection)
     response_data = generate_chat_response(
         user_message=request.message,
         conversation_history=[msg.dict() for msg in request.conversation_history],
         user_benefits=benefits_query,
+        user_id=current_user.id,  # Pass user_id directly for upgrade searches
         db=db
     )
     
