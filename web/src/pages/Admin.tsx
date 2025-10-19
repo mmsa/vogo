@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/Dialog";
-import { apiClient } from "@/lib/api";
+import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 interface Stats {
@@ -59,8 +59,8 @@ export default function Admin() {
 
   const loadStats = async () => {
     try {
-      const response = await apiClient.get("/api/admin/stats");
-      setStats(response.data);
+      const data = await api.get("/api/admin/stats");
+      setStats(data);
     } catch (error) {
       console.error("Failed to load stats:", error);
     }
@@ -69,10 +69,10 @@ export default function Admin() {
   const loadUsers = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get("/api/admin/users", {
-        params: { search: search || undefined },
-      });
-      setUsers(response.data.users);
+      const data: any = await api.get("/api/admin/users", 
+        search ? { search } : undefined
+      );
+      setUsers(data.users);
     } catch (error) {
       console.error("Failed to load users:", error);
     } finally {
@@ -82,8 +82,8 @@ export default function Admin() {
 
   const loadUserDetails = async (userId: number) => {
     try {
-      const response = await apiClient.get(`/api/admin/users/${userId}`);
-      setSelectedUser(response.data);
+      const data = await api.get(`/api/admin/users/${userId}`);
+      setSelectedUser(data);
       setShowUserModal(true);
     } catch (error) {
       console.error("Failed to load user details:", error);

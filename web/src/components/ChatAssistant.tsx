@@ -3,7 +3,7 @@ import { MessageCircle, X, Send, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
 import { cn } from "@/lib/utils";
-import { apiClient } from "@/lib/api";
+import { api } from "@/lib/api";
 
 interface Message {
   role: "user" | "assistant";
@@ -44,11 +44,11 @@ export function ChatAssistant() {
 
   const loadGreeting = async () => {
     try {
-      const response = await apiClient.get("/api/chat/hello");
+      const data: any = await api.get("/api/chat/hello");
       setMessages([
         {
           role: "assistant",
-          content: response.data.message,
+          content: data.message,
           timestamp: new Date().toISOString(),
         },
       ]);
@@ -71,19 +71,19 @@ export function ChatAssistant() {
     setLoading(true);
 
     try {
-      const response = await apiClient.post("/api/chat/", {
+      const data: any = await api.post("/api/chat/", {
         message: input,
         conversation_history: messages,
       });
 
       const assistantMessage: Message = {
         role: "assistant",
-        content: response.data.message,
+        content: data.message,
         timestamp: new Date().toISOString(),
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
-      setRelatedBenefits(response.data.related_benefits || []);
+      setRelatedBenefits(data.related_benefits || []);
     } catch (error: any) {
       const errorMessage: Message = {
         role: "assistant",

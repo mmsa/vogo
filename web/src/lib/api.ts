@@ -365,6 +365,22 @@ class ApiClient {
       }
     );
   }
+
+  // Generic GET method
+  async get<T = any>(endpoint: string, params?: Record<string, string>): Promise<T> {
+    const url = params
+      ? `${endpoint}?${new URLSearchParams(params)}`
+      : endpoint;
+    return this.request<T>(url, { method: "GET" });
+  }
+
+  // Generic POST method
+  async post<T = any>(endpoint: string, data?: any): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: "POST",
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
 }
 
 export const api = new ApiClient(API_BASE_URL);
