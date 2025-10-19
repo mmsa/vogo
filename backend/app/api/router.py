@@ -16,6 +16,7 @@ from app.api import (
     benefits,
     ai,
     chat,
+    analytics,
     dev_admin,
 )
 
@@ -37,9 +38,10 @@ api_router.include_router(check_semantic.router)  # Semantic matching
 api_router.include_router(llm.router)
 api_router.include_router(benefits.router)
 
-# AI Services
+# AI Services & Analytics
 api_router.include_router(ai.router)
 api_router.include_router(chat.router)
+api_router.include_router(analytics.router)
 
 # Development utilities (TODO: Remove in production)
 api_router.include_router(dev_admin.router)

@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, DateTime, Boolean
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean
 from app.core.db import Base
 
 
@@ -16,5 +16,12 @@ class Membership(Base):
     is_catalog = Column(Boolean, default=True, nullable=False)  # True = curated, False = discovered
     discovered_by_user_id = Column(Integer, nullable=True)  # User who discovered it
     status = Column(String, default="active", nullable=False)  # active, pending, rejected
+    
+    # Affiliate fields for monetization
+    affiliate_id = Column(String, nullable=True)  # Partner's affiliate ID
+    affiliate_url = Column(String, nullable=True)  # Affiliate signup/purchase URL
+    commission_type = Column(String, nullable=True)  # e.g., "cpa", "revenue_share", "hybrid"
+    partner_name = Column(String, nullable=True)  # Affiliate network/partner name
+    commission_notes = Column(Text, nullable=True)  # Notes about commission structure
     
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
