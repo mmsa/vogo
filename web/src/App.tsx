@@ -10,6 +10,7 @@ import Memberships from "./pages/Memberships";
 import Benefits from "./pages/Benefits";
 import Recommendations from "./pages/Recommendations";
 import Admin from "./pages/Admin";
+import DebugInfo from "./pages/DebugInfo";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 
@@ -56,6 +57,7 @@ function App() {
               <Route path="/benefits" element={<Benefits />} />
               <Route path="/recommendations" element={<Recommendations />} />
               <Route path="/admin" element={<Admin />} />
+              <Route path="/debug" element={<DebugInfo />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </AppShell>
