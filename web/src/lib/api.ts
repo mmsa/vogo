@@ -367,7 +367,10 @@ class ApiClient {
   }
 
   // Generic GET method
-  async get<T = any>(endpoint: string, params?: Record<string, string>): Promise<T> {
+  async get<T = any>(
+    endpoint: string,
+    params?: Record<string, string>
+  ): Promise<T> {
     const url = params
       ? `${endpoint}?${new URLSearchParams(params)}`
       : endpoint;
@@ -378,6 +381,14 @@ class ApiClient {
   async post<T = any>(endpoint: string, data?: any): Promise<T> {
     return this.request<T>(endpoint, {
       method: "POST",
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
+  // Generic PATCH method
+  async patch<T = any>(endpoint: string, data?: any): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: "PATCH",
       body: data ? JSON.stringify(data) : undefined,
     });
   }

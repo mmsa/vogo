@@ -58,9 +58,20 @@ export function DialogHeader({
   );
 }
 
-export function DialogTitle({ children }: { children: ReactNode }) {
+export function DialogTitle({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
   return (
-    <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+    <h2
+      className={cn(
+        "text-2xl font-bold text-zinc-900 dark:text-zinc-100",
+        className
+      )}
+    >
       {children}
     </h2>
   );

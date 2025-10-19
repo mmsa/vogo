@@ -55,7 +55,14 @@ Return strictly in JSON format (no markdown, no code blocks, just raw JSON):
 
 Important:
 - estimated_saving values MUST be in pence (multiply GBP by 100)
-- Be generous with savings estimates based on typical membership costs
+- BE REALISTIC with savings estimates - use these guidelines:
+  * Breakdown cover overlap: £80-200/year (8000-20000 pence)
+  * Travel insurance overlap: £30-100/year (3000-10000 pence)
+  * Mobile plan savings: £5-30/month = £60-360/year (6000-36000 pence)
+  * Retail/dining discounts: £20-100/year (2000-10000 pence)
+  * Banking fee savings: £5-15/month = £60-180/year (6000-18000 pence)
+  * NEVER exceed £500/year (50000 pence) for a single recommendation unless bundling multiple services
+  * If uncertain, use null rather than guessing high numbers
 - For benefit_match_ids field: Use benefit IDs (integers) from the provided data
 - In rationale text: Use the actual benefit TITLE, not "Benefit ID X"
 - kind must be one of: overlap, unused, switch, bundle, tip
