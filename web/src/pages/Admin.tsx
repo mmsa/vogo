@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Users, CreditCard, Gift, TrendingUp, Search, Shield, CheckCircle, Clock } from "lucide-react";
+import { Users, CreditCard, Gift, TrendingUp, Search, Shield, CheckCircle, Clock, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/Button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/Dialog";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/store/auth";
+import { useNavigate } from "react-router-dom";
 
 interface Stats {
   users: {
@@ -45,17 +47,34 @@ interface UserDetails extends User {
 }
 
 export default function Admin() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState<Stats | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [search, setSearch] = useState("");
   const [selectedUser, setSelectedUser] = useState<UserDetails | null>(null);
   const [showUserModal, setShowUserModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
+  // Check if user is admin
   useEffect(() => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+    
+    if (user.role !== "admin") {
+      console.error("Access denied: User is not an admin", user);
+      setError("Access denied: You must be an administrator to view this page.");
+      setLoading(false);
+      return;
+    }
+    
+    // User is admin, load data
     loadStats();
     loadUsers();
-  }, []);
+  }, [user]);
 
   const loadStats = async () => {
     try {
@@ -93,6 +112,66 @@ export default function Admin() {
   const handleSearch = () => {
     loadUsers();
   };
+
+  // Show loading state
+  if (loading && !error) {
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-200px)]">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="text-zinc-600 dark:text-zinc-400">Loading admin dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state (access denied)
+  if (error || !user || user.role !== "admin") {
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-200px)]">
+        <Card className="max-w-md mx-auto">
+          <CardHeader>
+            <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
+              <AlertTriangle className="w-6 h-6" />
+              <CardTitle>Access Denied</CardTitle>
+            </div>
+            <CardDescription>
+              You do not have permission to access the admin dashboard.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {user ? (
+              <div className="bg-zinc-100 dark:bg-zinc-800 rounded-lg p-4 space-y-2">
+                <p className="text-sm font-medium text-zinc-900 dark:text-white">Your Account:</p>
+                <div className="text-sm text-zinc-600 dark:text-zinc-400 space-y-1">
+                  <p><span className="font-medium">Email:</span> {user.email}</p>
+                  <p><span className="font-medium">Role:</span> <Badge variant={user.role === 'admin' ? 'default' : 'outline'}>{user.role}</Badge></p>
+                  <p><span className="font-medium">User ID:</span> {user.id}</p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                Please log in to continue.
+              </p>
+            )}
+            <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800">
+              <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-2">
+                To get admin access:
+              </p>
+              <ol className="text-sm text-zinc-600 dark:text-zinc-400 list-decimal list-inside space-y-1">
+                <li>Open browser console (F12)</li>
+                <li>Run: <code className="bg-zinc-200 dark:bg-zinc-700 px-1 rounded">fetch('/api/dev/make-me-admin', {'{'} method: 'POST', headers: {'{'} 'Authorization': 'Bearer ' + JSON.parse(localStorage.getItem('vogplus-auth')).state.accessToken {'}'} {'}'}).then(r =&gt; r.json()).then(console.log)</code></li>
+                <li>Log out and log back in</li>
+              </ol>
+            </div>
+            <Button onClick={() => navigate('/')} className="w-full">
+              Back to Dashboard
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 pb-8">

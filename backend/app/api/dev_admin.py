@@ -20,8 +20,10 @@ def whoami(
         "email": current_user.email,
         "role": current_user.role,
         "is_active": current_user.is_active,
-        "created_at": current_user.created_at.isoformat() if current_user.created_at else None,
-        "message": f"You are logged in as {current_user.email} with role '{current_user.role}'"
+        "created_at": (
+            current_user.created_at.isoformat() if current_user.created_at else None
+        ),
+        "message": f"You are logged in as {current_user.email} with role '{current_user.role}'",
     }
 
 
@@ -37,22 +39,22 @@ def make_me_admin(
             "user": {
                 "id": current_user.id,
                 "email": current_user.email,
-                "role": current_user.role
-            }
+                "role": current_user.role,
+            },
         }
-    
+
     # Update role
     current_user.role = "admin"
     db.commit()
     db.refresh(current_user)
-    
+
     return {
         "message": f"✅ {current_user.email} is now an admin! Please log out and log back in to see the Admin link.",
         "user": {
             "id": current_user.id,
             "email": current_user.email,
-            "role": current_user.role
-        }
+            "role": current_user.role,
+        },
     }
 
 
@@ -63,7 +65,7 @@ def list_all_users(
 ):
     """List all users and their roles (for debugging)."""
     users = db.query(User).all()
-    
+
     return {
         "current_user_id": current_user.id,
         "users": [
@@ -72,9 +74,8 @@ def list_all_users(
                 "email": u.email,
                 "role": u.role,
                 "is_active": u.is_active,
-                "is_you": u.id == current_user.id
+                "is_you": u.id == current_user.id,
             }
             for u in users
-        ]
+        ],
     }
-
