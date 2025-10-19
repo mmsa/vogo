@@ -11,9 +11,13 @@ from app.api import (
     user_memberships,
     recommendations,
     check,
+    check_semantic,
     llm,
     benefits,
     ai,
+    chat,
+    analytics,
+    dev_admin,
 )
 
 api_router = APIRouter()
@@ -30,8 +34,14 @@ api_router.include_router(memberships_validate.router)
 api_router.include_router(user_memberships.router)
 api_router.include_router(recommendations.router)
 api_router.include_router(check.router)
+api_router.include_router(check_semantic.router)  # Semantic matching
 api_router.include_router(llm.router)
 api_router.include_router(benefits.router)
 
-# AI Services
+# AI Services & Analytics
 api_router.include_router(ai.router)
+api_router.include_router(chat.router)
+api_router.include_router(analytics.router)
+
+# Development utilities (TODO: Remove in production)
+api_router.include_router(dev_admin.router)

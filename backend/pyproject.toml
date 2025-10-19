@@ -1,8 +1,8 @@
 [tool.poetry]
-name = "vogo-backend"
+name = "vogplus-ai-backend"
 version = "0.1.0"
-description = "Vogo Backend API - Membership Benefits Tracker"
-authors = ["Vogo Team"]
+description = "VogPlus.ai Backend API - Intelligent Membership Benefits Platform"
+authors = ["VogPlus.ai Team"]
 readme = "README.md"
 
 [tool.poetry.dependencies]

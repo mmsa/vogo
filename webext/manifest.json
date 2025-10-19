@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "VogPlus",
+  "name": "VogPlus.ai",
   "version": "0.1.0",
   "action": { "default_popup": "popup/index.html" },
   "options_page": "options/index.html",

@@ -5,6 +5,7 @@ from app.models.benefit import Benefit
 from app.models.user_membership import UserMembership
 from app.models.vendor import Vendor
 from app.models.recommendation import Recommendation, RecommendationKind
+from app.models.analytics import AnalyticsEvent
 
 __all__ = [
     "User",
@@ -16,4 +17,5 @@ __all__ = [
     "Vendor",
     "Recommendation",
     "RecommendationKind",
+    "AnalyticsEvent",
 ]

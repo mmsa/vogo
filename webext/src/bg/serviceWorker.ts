@@ -42,16 +42,21 @@ async function handlePageContext(msg: any) {
   const token = await gs<string>("accessToken");
 
   console.log("  📡 Fetching fresh data from", apiBase);
-  console.log("  🔑 Token:", token ? "present" : "missing");
+  console.log("  🔑 Token:", token ? `present (${token.substring(0, 20)}...)` : "MISSING");
+  
+  // DEBUG: Check all storage
+  const allSync = await chrome.storage.sync.get(null);
+  console.log("  🗄️  All sync storage keys:", Object.keys(allSync));
 
   if (!token) {
-    console.error("  ❌ No token!");
+    console.error("  ❌ No token in storage!");
+    console.error("  💡 User needs to log in via the extension popup");
     await ss(
       LAST_RECS,
       {
         hostname,
         data: null,
-        error: "Not authenticated. Please set your token in Options.",
+        error: "Not authenticated. Please log in via the extension popup.",
       },
       "local"
     );
@@ -60,13 +65,14 @@ async function handlePageContext(msg: any) {
   }
 
   try {
-    const r = await fetch(apiBase + "/api/ai/recommendations", {
+    // Use NEW semantic matching endpoint
+    const r = await fetch(apiBase + "/api/check-semantic", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: "Bearer " + token,
       },
-      body: JSON.stringify({ domain: hostname }),
+      body: JSON.stringify({ url: msg.url }),
     });
 
     console.log("  📥 Response status:", r.status);
@@ -78,24 +84,41 @@ async function handlePageContext(msg: any) {
     }
 
     const data = await r.json();
+
+    // Transform semantic response to match old format for popup
+    const transformed = {
+      recommendations: data.has_matches
+        ? [
+            {
+              title: data.message,
+              kind: "tip",
+              action_url: null,
+              estimated_saving_min: null,
+              estimated_saving_max: null,
+            },
+          ]
+        : [],
+      relevant_benefits: data.highlight_benefit_ids || [],
+    };
+
     console.log(
-      "  ✅ Got data:",
-      data?.recommendations?.length || 0,
-      "recommendations"
+      "  ✅ Got semantic match:",
+      data.has_matches ? "YES" : "NO",
+      data.message
     );
 
     // Update cache
-    cache[hostname] = { ts: now, data };
+    cache[hostname] = { ts: now, data: transformed };
     await ss(CACHE, cache, "local");
 
     // Store for popup
-    await ss(LAST_RECS, { hostname, data, error: null }, "local");
+    await ss(LAST_RECS, { hostname, data: transformed, error: null }, "local");
     console.log("  💾 Stored in LAST_RECS");
     notifyPopup();
 
     // Auto-open on checkout if enabled
     const autoOpen = await gs<boolean>("autoOpen");
-    if (autoOpen && isCheckout && (data?.recommendations?.length || 0) > 0) {
+    if (autoOpen && isCheckout && data.has_matches) {
       try {
         await chrome.action.openPopup();
       } catch (e) {

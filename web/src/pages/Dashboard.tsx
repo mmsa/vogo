@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { CreditCard, Gift, Lightbulb, Plus, Sparkles, TrendingUp, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
-import { api, CURRENT_USER_ID, Benefit, Recommendation } from "@/lib/api";
+import { api, Benefit, Recommendation } from "@/lib/api";
 import { useAuth } from "@/store/auth";
 import { StatCard } from "@/components/StatCard";
 import { SectionHeader } from "@/components/SectionHeader";
@@ -18,15 +18,19 @@ export default function Dashboard() {
   const { user } = useAuth();
 
   useEffect(() => {
-    loadDashboardData();
-  }, []);
+    if (user?.id) {
+      loadDashboardData();
+    }
+  }, [user?.id]);
 
   const loadDashboardData = async () => {
+    if (!user?.id) return;
+    
     try {
       setLoading(true);
       const [benefitsData, recsData] = await Promise.all([
-        api.getUserBenefits(CURRENT_USER_ID),
-        api.getRecommendations(CURRENT_USER_ID),
+        api.getUserBenefits(user.id),
+        api.getRecommendations(user.id),
       ]);
       setBenefits(benefitsData);
       setRecommendations(recsData);

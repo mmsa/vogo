@@ -4,7 +4,7 @@ const root = document.getElementById("app")!;
 
 root.innerHTML = `
 <div style="font-family: ui-sans-serif, system-ui; padding: 24px; max-width: 640px; margin: 0 auto;">
-  <h2 style="color: #5B4BFB; margin-bottom: 24px;">VogPlus Options</h2>
+  <h2 style="color: #5B4BFB; margin-bottom: 24px;">VogPlus.ai Options</h2>
   
   <div style="margin-bottom: 20px;">
     <label style="display: block; margin-bottom: 8px; font-weight: 600;">

@@ -61,12 +61,26 @@ def _generate_mock_recommendations(
             )
             benefit_titles = [b.get("title", "") for b in items[:2]]
 
+            # Calculate realistic savings based on category
+            if category == "breakdown_cover":
+                min_saving = 8000  # £80
+                max_saving = 18000  # £180
+            elif category == "travel_insurance":
+                min_saving = 3000  # £30
+                max_saving = 8000  # £80
+            elif category in ["mobile", "telecommunications"]:
+                min_saving = 6000  # £60/year
+                max_saving = 24000  # £240/year
+            else:
+                min_saving = 3000  # £30
+                max_saving = 10000  # £100
+
             recommendations.append(
                 {
-                    "title": f"Save £{len(items) * 80}/year by consolidating duplicate {category.replace('_', ' ')} coverage",
+                    "title": f"Save £{min_saving//100}-£{max_saving//100}/year by dropping duplicate {category.replace('_', ' ')} coverage",
                     "rationale": f"You have {len(items)} {category.replace('_', ' ')} benefits across {', '.join(membership_names[:2])}. {benefit_titles[0]} and {benefit_titles[1] if len(benefit_titles) > 1 else 'another benefit'} provide similar coverage. Keep the one with better value and cancel the duplicate to save money immediately. Review your memberships to identify which offers superior coverage for your needs.",
-                    "estimated_saving_min": len(items) * 8000,  # £80 in pence
-                    "estimated_saving_max": len(items) * 12000,  # £120 in pence
+                    "estimated_saving_min": min_saving,
+                    "estimated_saving_max": max_saving,
                     "action_url": items[0].get("source_url"),
                     "membership_slug": items[0].get("membership_slug"),
                     "benefit_match_ids": [b.get("id") for b in items],
@@ -81,12 +95,31 @@ def _generate_mock_recommendations(
             membership_name = (
                 benefit.get("membership_slug", "").replace("-", " ").title()
             )
+            # Realistic savings for unused benefits based on category
+            category = benefit.get("category", "")
+            if category == "travel_insurance":
+                min_saving = 3000  # £30
+                max_saving = 8000  # £80
+                typical_value = 50
+            elif category == "lounge_access":
+                min_saving = 5000  # £50
+                max_saving = 15000  # £150
+                typical_value = 100
+            elif category == "cashback":
+                min_saving = 2000  # £20
+                max_saving = 10000  # £100
+                typical_value = 60
+            else:
+                min_saving = 2000  # £20
+                max_saving = 8000  # £80
+                typical_value = 50
+
             recommendations.append(
                 {
-                    "title": f"Unlock £{150}/year in unused {benefit.get('title', 'benefits')} from your {membership_name}",
-                    "rationale": f"Your {membership_name} membership includes {benefit.get('title')} worth approximately £150/year that many members forget to use. {benefit.get('description', 'This valuable perk')} is ready to activate. Log into your account today and set up this benefit - it takes just 2 minutes and could save you significantly on your next use. Don't let this value go to waste!",
-                    "estimated_saving_min": 10000,  # £100
-                    "estimated_saving_max": 20000,  # £200
+                    "title": f"Unlock £{typical_value}/year in unused {benefit.get('title', 'benefits')} from your {membership_name}",
+                    "rationale": f"Your {membership_name} membership includes {benefit.get('title')} worth approximately £{typical_value}/year that many members forget to use. {benefit.get('description', 'This valuable perk')} is ready to activate. Log into your account today and set up this benefit - it takes just 2 minutes and could save you significantly on your next use. Don't let this value go to waste!",
+                    "estimated_saving_min": min_saving,
+                    "estimated_saving_max": max_saving,
                     "action_url": benefit.get("source_url"),
                     "membership_slug": benefit.get("membership_slug"),
                     "benefit_match_ids": [benefit.get("id")],
@@ -97,12 +130,13 @@ def _generate_mock_recommendations(
 
     # Add a bundle/switch recommendation
     if len(memberships) > 2:
+        # More realistic bundling savings: £50-150/year
         recommendations.append(
             {
-                "title": f"Consider consolidating to a premium membership - potential £{200}/year savings",
+                "title": f"Consider consolidating to a premium membership - potential £50-150/year savings",
                 "rationale": f"You're currently managing {len(memberships)} separate memberships ({', '.join([m.get('name', '') for m in memberships[:3]])}). Premium all-in-one memberships like Revolut Metal or Amex Platinum often bundle these benefits at better value. Compare the total annual cost of your current memberships (typically £{len(memberships) * 60}/year) against a premium option. You might get more benefits for less money while simplifying your life to just one card.",
-                "estimated_saving_min": 15000,
-                "estimated_saving_max": 30000,
+                "estimated_saving_min": 5000,  # £50
+                "estimated_saving_max": 15000,  # £150
                 "action_url": None,
                 "membership_slug": None,
                 "benefit_match_ids": [],
@@ -112,12 +146,13 @@ def _generate_mock_recommendations(
 
     # Add a quick win tip
     if benefits:
+        # Realistic savings from avoiding one forgotten renewal: £30-80/year
         recommendations.append(
             {
                 "title": "Quick Win: Set calendar reminders for your membership renewals",
-                "rationale": f"With {len(memberships)} active memberships, it's easy to miss renewal dates and pay for services you no longer need. Set up calendar alerts 30 days before each renewal to review if you're still getting value. This simple 5-minute task can save you hundreds by catching unused memberships before auto-renewal. Studies show 42% of people forget about subscriptions they no longer use.",
-                "estimated_saving_min": 5000,
-                "estimated_saving_max": 15000,
+                "rationale": f"With {len(memberships)} active memberships, it's easy to miss renewal dates and pay for services you no longer need. Set up calendar alerts 30 days before each renewal to review if you're still getting value. This simple 5-minute task can help you catch unused memberships before auto-renewal. Studies show 42% of people forget about subscriptions they no longer use.",
+                "estimated_saving_min": 3000,  # £30
+                "estimated_saving_max": 8000,  # £80
                 "action_url": None,
                 "membership_slug": None,
                 "benefit_match_ids": [],
@@ -220,7 +255,7 @@ def generate_llm_recommendations(
         .join(Membership, Benefit.membership_id == Membership.id)
         .filter(
             Benefit.membership_id.in_(membership_ids),
-            Benefit.validation_status == "approved"
+            Benefit.validation_status == "approved",
         )
         .all()
     )

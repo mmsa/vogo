@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Gift, Plus } from "lucide-react";
-import { api, CURRENT_USER_ID, Benefit, Membership } from "@/lib/api";
+import { api, Benefit, Membership } from "@/lib/api";
+import { useAuth } from "@/store/auth";
 import { SectionHeader } from "@/components/SectionHeader";
 import { BenefitCard } from "@/components/BenefitCard";
 import { Button } from "@/components/ui/Button";
@@ -14,6 +15,7 @@ interface BenefitWithMembership extends Benefit {
 }
 
 export default function Benefits() {
+  const { user } = useAuth();
   const [benefits, setBenefits] = useState<BenefitWithMembership[]>([]);
   const [memberships, setMemberships] = useState<Map<number, Membership>>(
     new Map()
@@ -21,14 +23,18 @@ export default function Benefits() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadBenefits();
-  }, []);
+    if (user?.id) {
+      loadBenefits();
+    }
+  }, [user?.id]);
 
   const loadBenefits = async () => {
+    if (!user?.id) return;
+    
     try {
       setLoading(true);
       const [benefitsData, membershipsData] = await Promise.all([
-        api.getUserBenefits(CURRENT_USER_ID),
+        api.getUserBenefits(user.id),
         api.getMemberships(),
       ]);
 
