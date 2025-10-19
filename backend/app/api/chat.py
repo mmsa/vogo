@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.core.auth import require_auth
+from app.core.auth import get_current_user
 from app.core.db import get_db
 from app.schemas.chat import ChatRequest, ChatResponse, BenefitReference
 from app.services.chat_service import generate_chat_response
@@ -19,7 +19,7 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 @router.post("/", response_model=ChatResponse)
 async def chat(
     request: ChatRequest,
-    current_user: User = Depends(require_auth),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -79,7 +79,7 @@ async def chat(
 
 @router.get("/hello")
 async def hello(
-    current_user: User = Depends(require_auth),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
