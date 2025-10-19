@@ -16,6 +16,7 @@ from app.api import (
     benefits,
     ai,
     chat,
+    dev_admin,
 )
 
 api_router = APIRouter()
@@ -39,3 +40,6 @@ api_router.include_router(benefits.router)
 # AI Services
 api_router.include_router(ai.router)
 api_router.include_router(chat.router)
+
+# Development utilities (TODO: Remove in production)
+api_router.include_router(dev_admin.router)
