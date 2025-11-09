@@ -1,6 +1,7 @@
 import { LucideIcon } from "lucide-react";
 import { Card } from "./ui/Card";
 import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
 
 interface StatCardProps {
   icon: LucideIcon;
@@ -8,6 +9,8 @@ interface StatCardProps {
   value: string | number;
   iconColor?: string;
   delay?: number;
+  onClick?: () => void;
+  href?: string;
 }
 
 export function StatCard({
@@ -16,11 +19,27 @@ export function StatCard({
   value,
   iconColor,
   delay = 0,
+  onClick,
+  href,
 }: StatCardProps) {
+  const navigate = useNavigate();
+
+  const handleClick = () => {
+    if (onClick) {
+      onClick();
+    } else if (href) {
+      navigate(href);
+    }
+  };
+
   return (
     <Card
-      className="p-6 hover:scale-105 transition-transform cursor-pointer animate-fade-in"
+      className={cn(
+        "p-6 hover:scale-105 transition-transform animate-fade-in",
+        (onClick || href) && "cursor-pointer hover:shadow-lg"
+      )}
       style={{ animationDelay: `${delay}ms` }}
+      onClick={handleClick}
     >
       <div className="flex items-start justify-between">
         <div className="space-y-2">

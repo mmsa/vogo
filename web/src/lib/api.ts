@@ -124,6 +124,7 @@ export interface MembershipPreview {
 export interface DiscoverMembershipResponse {
   membership: MembershipPreview;
   benefits_preview: BenefitPreview[];
+  benefits_found?: boolean; // Whether actual benefits were discovered
 }
 
 export interface ValidateMembershipRequest {
@@ -375,6 +376,13 @@ class ApiClient {
       ? `${endpoint}?${new URLSearchParams(params)}`
       : endpoint;
     return this.request<T>(url, { method: "GET" });
+  }
+
+  // Get benefits by membership ID
+  async getBenefitsByMembership(membershipId: number): Promise<Benefit[]> {
+    return this.get<Benefit[]>("/api/benefits", {
+      membership_id: membershipId.toString(),
+    });
   }
 
   // Generic POST method

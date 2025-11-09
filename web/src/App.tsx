@@ -7,6 +7,7 @@ import { AppHeader } from "./components/AppHeader";
 import { AppShell } from "./components/AppShell";
 import Dashboard from "./pages/Dashboard";
 import Memberships from "./pages/Memberships";
+import MembershipBenefits from "./pages/MembershipBenefits";
 import Benefits from "./pages/Benefits";
 import Recommendations from "./pages/Recommendations";
 import Admin from "./pages/Admin";
@@ -54,6 +55,7 @@ function App() {
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/memberships" element={<Memberships />} />
+              <Route path="/memberships/:id" element={<MembershipBenefits />} />
               <Route path="/benefits" element={<Benefits />} />
               <Route path="/recommendations" element={<Recommendations />} />
               <Route path="/admin" element={<Admin />} />

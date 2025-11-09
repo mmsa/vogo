@@ -7,7 +7,7 @@ const LAST_RECS = "lastRecs";
 chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
   if (msg?.type === "PAGE_CONTEXT") {
     // Process in background, don't block
-    handlePageContext(msg);
+    handlePageContext(msg, sender.tab?.id);
     return true;
   }
 
@@ -19,9 +19,19 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
     );
     return true;
   }
+
+  // Handle open popup request from content script
+  if (msg?.type === "OPEN_POPUP") {
+    try {
+      await chrome.action.openPopup();
+    } catch (e) {
+      console.log("Could not open popup:", e);
+    }
+    return true;
+  }
 });
 
-async function handlePageContext(msg: any) {
+async function handlePageContext(msg: any, tabId?: number) {
   const { hostname, isCheckout } = msg;
   console.log("🔧 Service Worker: Handling", hostname);
 
@@ -34,6 +44,19 @@ async function handlePageContext(msg: any) {
     console.log("  ✅ Using cached data");
     await ss(LAST_RECS, { hostname, data: cached.data, error: null }, "local");
     notifyPopup();
+    
+    // Show badge if cached data has matches (like Honey)
+    if (cached.data?.recommendations?.length > 0 && tabId) {
+      try {
+        chrome.tabs.sendMessage(tabId, {
+          type: "SHOW_BADGE",
+          message: cached.data.recommendations[0]?.title || "You have benefits available on this site!",
+          benefitCount: cached.data.relevant_benefits?.length || 0,
+        }).catch(() => {});
+      } catch (e) {
+        // Ignore errors
+      }
+    }
     return;
   }
 
@@ -115,6 +138,31 @@ async function handlePageContext(msg: any) {
     await ss(LAST_RECS, { hostname, data: transformed, error: null }, "local");
     console.log("  💾 Stored in LAST_RECS");
     notifyPopup();
+
+    // Automatically show floating badge if benefits found (like Honey)
+    if (data.has_matches && tabId) {
+      try {
+        chrome.tabs.sendMessage(tabId, {
+          type: "SHOW_BADGE",
+          message: data.message || "You have benefits available on this site!",
+          benefitCount: data.highlight_benefit_ids?.length || 0,
+        }).catch((e) => {
+          // Content script might not be ready, that's okay
+          console.log("Could not send badge message:", e);
+        });
+      } catch (e) {
+        console.log("Could not show badge:", e);
+      }
+    } else if (!data.has_matches && tabId) {
+      // Hide badge if no matches
+      try {
+        chrome.tabs.sendMessage(tabId, {
+          type: "HIDE_BADGE",
+        }).catch(() => {});
+      } catch (e) {
+        // Ignore errors
+      }
+    }
 
     // Auto-open on checkout if enabled
     const autoOpen = await gs<boolean>("autoOpen");

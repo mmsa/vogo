@@ -39,6 +39,7 @@ class MembershipPreview(BaseModel):
 class DiscoverResponse(BaseModel):
     membership: MembershipPreview
     benefits_preview: List[BenefitPreview]
+    benefits_found: bool = True  # Whether actual benefits were discovered (vs placeholder)
 
 
 class BenefitDecision(BaseModel):
@@ -83,7 +84,8 @@ def discover_membership(
             membership=MembershipPreview(**result["membership"]),
             benefits_preview=[
                 BenefitPreview(**b) for b in result["benefits_preview"]
-            ]
+            ],
+            benefits_found=result.get("benefits_found", True)
         )
         
     except ValueError as e:

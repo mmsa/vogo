@@ -12,6 +12,14 @@ router = APIRouter(prefix="/api/memberships", tags=["memberships"])
 @router.get("", response_model=List[MembershipRead])
 def list_memberships(db: Session = Depends(get_db)):
     """Get catalog of all available memberships."""
-    memberships = db.query(Membership).order_by(Membership.name).all()
+    # Return only active memberships that are in the catalog
+    # This includes both curated memberships and user-discovered memberships
+    memberships = (
+        db.query(Membership)
+        .filter(Membership.status == "active")
+        .filter(Membership.is_catalog == True)
+        .order_by(Membership.name)
+        .all()
+    )
     return memberships
 

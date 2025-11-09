@@ -8,82 +8,78 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { Switch } from "@/components/ui/Switch";
 
 export default function Recommendations() {
   const { user } = useAuth();
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [relevantBenefits, setRelevantBenefits] = useState<Benefit[]>([]);
   const [loading, setLoading] = useState(true);
-  const [aiMode, setAiMode] = useState(() => {
-    // Restore AI mode preference
-    const saved = localStorage.getItem("vogo_ai_mode");
-    return saved === "true";
-  });
-
-  // Cache for instant toggle switching (persisted to localStorage)
-  const [cachedRuleBased, setCachedRuleBased] = useState<
-    Recommendation[] | null
-  >(() => {
-    const saved = localStorage.getItem("vogo_cache_rule");
-    return saved ? JSON.parse(saved) : null;
-  });
-  const [cachedAI, setCachedAI] = useState<{
-    recs: Recommendation[];
-    benefits: Benefit[];
-  } | null>(() => {
-    const saved = localStorage.getItem("vogo_cache_ai");
-    return saved ? JSON.parse(saved) : null;
-  });
 
   useEffect(() => {
     if (user?.id) {
       loadRecommendations();
     }
-  }, [aiMode, user?.id]);
+  }, [user?.id]);
 
   const loadRecommendations = async () => {
     if (!user?.id) return;
     
     try {
       setLoading(true);
-      if (aiMode) {
-        // Check cache first
-        if (cachedAI) {
-          setRecommendations(cachedAI.recs);
-          setRelevantBenefits(cachedAI.benefits);
+      
+      // Check cache first
+      const cachedAI = localStorage.getItem("vogo_cache_ai");
+      if (cachedAI) {
+        try {
+          const cached = JSON.parse(cachedAI);
+          // Filter cached recommendations (in case cache was from before filtering)
+          const filteredCached = cached.recs.filter(
+            (rec: Recommendation) => rec.kind === "overlap" || rec.kind === "tip"
+          );
+          setRecommendations(filteredCached);
+          setRelevantBenefits(cached.benefits);
           setLoading(false);
+          
+          // Load fresh data in background (non-blocking)
+          api.getLLMRecommendations({ user_id: user.id })
+            .then(data => {
+              // Filter out "unused" recommendations - only show overlaps
+              const filteredRecs = data.recommendations.filter(
+                (rec: Recommendation) => rec.kind === "overlap" || rec.kind === "tip"
+              );
+              setRecommendations(filteredRecs);
+              setRelevantBenefits(data.relevant_benefits);
+              const aiCache = {
+                recs: filteredRecs,
+                benefits: data.relevant_benefits,
+              };
+              // Update cache
+              localStorage.setItem("vogo_cache_ai", JSON.stringify(aiCache));
+            })
+            .catch(err => console.error("Background refresh failed:", err));
           return;
+        } catch (e) {
+          // Cache parse failed, continue to load fresh
+          console.error("Cache parse error:", e);
         }
-        // Use LLM-powered recommendations
-        const data = await api.getLLMRecommendations({
-          user_id: user.id,
-        });
-        setRecommendations(data.recommendations);
-        setRelevantBenefits(data.relevant_benefits);
-        const aiCache = {
-          recs: data.recommendations,
-          benefits: data.relevant_benefits,
-        };
-        setCachedAI(aiCache);
-        // Persist to localStorage
-        localStorage.setItem("vogo_cache_ai", JSON.stringify(aiCache));
-      } else {
-        // Check cache first
-        if (cachedRuleBased) {
-          setRecommendations(cachedRuleBased);
-          setRelevantBenefits([]);
-          setLoading(false);
-          return;
-        }
-        // Use rule-based recommendations
-        const data = await api.getRecommendations(user.id);
-        setRecommendations(data);
-        setRelevantBenefits([]);
-        setCachedRuleBased(data);
-        // Persist to localStorage
-        localStorage.setItem("vogo_cache_rule", JSON.stringify(data));
       }
+      
+      // Use LLM-powered recommendations
+      const data = await api.getLLMRecommendations({
+        user_id: user.id,
+      });
+      // Filter out "unused" recommendations - only show overlaps
+      const filteredRecs = data.recommendations.filter(
+        (rec: Recommendation) => rec.kind === "overlap" || rec.kind === "tip"
+      );
+      setRecommendations(filteredRecs);
+      setRelevantBenefits(data.relevant_benefits);
+      const aiCache = {
+        recs: filteredRecs,
+        benefits: data.relevant_benefits,
+      };
+      // Persist to localStorage
+      localStorage.setItem("vogo_cache_ai", JSON.stringify(aiCache));
     } catch (error) {
       console.error("Failed to load recommendations:", error);
     } finally {
@@ -91,14 +87,9 @@ export default function Recommendations() {
     }
   };
 
-  // Save AI mode preference when it changes
-  useEffect(() => {
-    localStorage.setItem("vogo_ai_mode", String(aiMode));
-  }, [aiMode]);
-
   return (
     <div className="space-y-8 animate-fade-in pb-8">
-      {/* Header with Mode Toggle */}
+      {/* Header */}
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
         <div className="flex-1">
           <h1 className="text-4xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">
@@ -109,46 +100,27 @@ export default function Recommendations() {
           </p>
         </div>
 
-        {/* Mode Toggle */}
-        <Card className="p-4 flex items-center gap-4 shrink-0">
-          <span
-            className={`text-sm font-medium transition-colors ${
-              !aiMode ? "text-primary" : "text-zinc-500 dark:text-zinc-400"
-            }`}
-          >
-            Rule-based
-          </span>
-          <Switch checked={aiMode} onChange={setAiMode} disabled={loading} />
-          <div className="flex items-center gap-2">
-            <span
-              className={`text-sm font-medium transition-colors ${
-                aiMode ? "text-primary" : "text-zinc-500 dark:text-zinc-400"
-              }`}
-            >
-              AI Mode
-            </span>
-            <Badge variant="default" className="gap-1">
-              <Sparkles className="w-3 h-3" />
-              AI Analysis
-            </Badge>
-          </div>
+        {/* AI Badge */}
+        <Card className="p-4 flex items-center gap-2 shrink-0">
+          <Badge variant="default" className="gap-1">
+            <Sparkles className="w-3 h-3" />
+            AI Analysis
+          </Badge>
         </Card>
       </div>
 
       {/* Loading State */}
       {loading ? (
         <div className="space-y-4">
-          {aiMode && (
-            <Card className="p-8 text-center">
-              <Loader2 className="w-12 h-12 text-primary mx-auto mb-4 animate-spin" />
-              <p className="font-medium text-zinc-900 dark:text-zinc-100">
-                Analysis using AI...
-              </p>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-                This may take a few seconds
-              </p>
-            </Card>
-          )}
+          <Card className="p-8 text-center">
+            <Loader2 className="w-12 h-12 text-primary mx-auto mb-4 animate-spin" />
+            <p className="font-medium text-zinc-900 dark:text-zinc-100">
+              Analysis using AI...
+            </p>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
+              This may take a few seconds
+            </p>
+          </Card>
           <div className="space-y-4">
             {[...Array(3)].map((_, i) => (
               <Skeleton key={i} className="h-48" />
@@ -187,8 +159,8 @@ export default function Recommendations() {
                 ))}
               </div>
 
-              {/* Relevant Benefits Section (AI Mode) */}
-              {aiMode && relevantBenefits.length > 0 && (
+              {/* Relevant Benefits Section */}
+              {relevantBenefits.length > 0 && (
                 <Card
                   className="p-6 animate-fade-in mt-8"
                   style={{ animationDelay: "300ms" }}

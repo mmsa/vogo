@@ -11,7 +11,7 @@ interface BenefitCardProps {
 
 export function BenefitCard({ benefit }: BenefitCardProps) {
   return (
-    <Card className="p-5 hover:shadow-card-hover transition-shadow">
+    <Card className="p-5 hover:shadow-card-hover transition-shadow bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700">
       <div className="flex items-start gap-4">
         <div className="rounded-lg bg-accent/10 p-2 flex-shrink-0">
           <Gift className="w-4 h-4 text-accent" />
@@ -19,7 +19,7 @@ export function BenefitCard({ benefit }: BenefitCardProps) {
 
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2 mb-1">
-            <h4 className="font-medium text-zinc-900 dark:text-zinc-100 text-sm">
+            <h4 className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm">
               {benefit.title}
             </h4>
             {benefit.category && (
@@ -30,14 +30,14 @@ export function BenefitCard({ benefit }: BenefitCardProps) {
           </div>
 
           {benefit.description && (
-            <p className="text-xs text-zinc-600 dark:text-zinc-400 mb-2">
+            <p className="text-sm text-zinc-800 dark:text-zinc-200 mb-2 leading-relaxed">
               {truncate(benefit.description, 100)}
             </p>
           )}
 
           <div className="flex items-center justify-between">
             {benefit.vendor_domain && (
-              <span className="text-xs text-zinc-500 dark:text-zinc-500">
+              <span className="text-xs text-zinc-600 dark:text-zinc-400">
                 {benefit.vendor_domain}
               </span>
             )}

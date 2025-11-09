@@ -149,26 +149,32 @@ export function RecommendationCard({
 
       {/* Footer Actions */}
       <div className="flex items-center gap-3 pt-4 border-t-2 border-zinc-100 dark:border-zinc-800 pl-[4.5rem]">
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-2"
-          onClick={() => setShowDetails(true)}
-        >
-          <Info className="w-4 h-4" />
-          Details
-        </Button>
         {recommendation.action_url ? (
-          <Button
-            size="sm"
-            className="gap-2 font-semibold"
-            onClick={() => window.open(recommendation.action_url, "_blank")}
-          >
-            Take Action
-            <ArrowUpRight className="w-4 h-4" />
-          </Button>
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => setShowDetails(true)}
+            >
+              <Info className="w-4 h-4" />
+              Details
+            </Button>
+            <Button
+              size="sm"
+              className="gap-2 font-semibold"
+              onClick={() => window.open(recommendation.action_url, "_blank")}
+            >
+              Take Action
+              <ArrowUpRight className="w-4 h-4" />
+            </Button>
+          </>
         ) : (
-          <Button size="sm" className="gap-2 font-semibold">
+          <Button 
+            size="sm" 
+            className="gap-2 font-semibold"
+            onClick={() => setShowDetails(true)}
+          >
             Review Now
           </Button>
         )}
