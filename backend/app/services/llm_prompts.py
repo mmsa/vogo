@@ -8,21 +8,25 @@ User JSON:
 Your mission: Help this user maximize value and minimize waste from their memberships.
 
 Analysis Framework:
-1) **Duplicate Detection**: Find benefits in the same category across multiple memberships that overlap
-   - Calculate potential savings if they consolidate
-   - Identify which membership provides better value
+1) **Duplicate Detection (ONLY THIS)**: Find benefits in the same category across DIFFERENT memberships that overlap
+   - ONLY show recommendations when there is a REAL OVERLAP between DIFFERENT memberships
+   - ✅ GOOD: User has RAC Breakdown Cover from HSBC bank (membership A) AND also pays for RAC Breakdown separately (membership B) → OVERLAP
+   - ✅ GOOD: User has Travel Insurance from Amex (membership A) AND also has Travel Insurance from Revolut (membership B) → OVERLAP
+   - ❌ BAD: User has Roadside Assistance AND Recovery Service both from RAC Breakdown Cover (same membership) → NOT an overlap
+   - ❌ BAD: User has multiple benefits from the same membership → NOT an overlap
+   - Calculate potential savings based on the standalone cost of the duplicate
+   - Identify which membership provides the benefit as part of a package vs. which charges separately
+   - MUST include BOTH membership names in the rationale
    
-2) **Unused Perks**: Spot high-value benefits the user likely isn't using
-   - Consider benefit category, typical usage patterns, and value
-   - Provide specific activation steps
+CRITICAL CHECK:
+- Before creating an overlap recommendation, check the membership_id or membership_name for each benefit
+- If all benefits in benefit_match_ids have the SAME membership_id → DO NOT create the recommendation
+- Only create if benefits have DIFFERENT membership_id values
    
-3) **Better Alternatives**: Suggest if one membership could replace multiple others
-   - Compare total costs vs. combined benefits
-   - Highlight unique perks they'd gain
-   
-4) **Quick Wins**: Immediate actions for easy savings or value unlocks
-   - Time-sensitive offers
-   - Simple activations with high return
+CRITICAL: DO NOT generate:
+- "Unused Perks" recommendations - users don't need to be told about features they already have
+- "Better Alternatives" unless there's a clear overlap
+- "Quick Wins" unless there's a domain context match
 
 Writing Guidelines:
 - Be conversational and personal (use "you" and "your")
@@ -47,7 +51,7 @@ Return strictly in JSON format (no markdown, no code blocks, just raw JSON):
       "action_url": "string or null",
       "membership_slug": "string or null",
       "benefit_match_ids": [benefit_id numbers],
-      "kind": "overlap|unused|switch|bundle|tip"
+      "kind": "overlap" (ONLY use this kind - focus on duplicate benefits from different memberships)
     }}
   ],
   "relevant_benefits": [benefit_id numbers]
@@ -55,17 +59,20 @@ Return strictly in JSON format (no markdown, no code blocks, just raw JSON):
 
 Important:
 - estimated_saving values MUST be in pence (multiply GBP by 100)
-- BE REALISTIC with savings estimates - use these guidelines:
-  * Breakdown cover overlap: £80-200/year (8000-20000 pence)
-  * Travel insurance overlap: £30-100/year (3000-10000 pence)
-  * Mobile plan savings: £5-30/month = £60-360/year (6000-36000 pence)
-  * Retail/dining discounts: £20-100/year (2000-10000 pence)
-  * Banking fee savings: £5-15/month = £60-180/year (6000-18000 pence)
-  * NEVER exceed £500/year (50000 pence) for a single recommendation unless bundling multiple services
+- BE REALISTIC AND CONSISTENT with savings estimates - use these guidelines:
+  * Breakdown cover overlap: £80-200/year (8000-20000 pence) - typical standalone cost
+  * Travel insurance overlap: £30-100/year (3000-10000 pence) - typical standalone cost
+  * Mobile plan overlap: £60-240/year (6000-24000 pence) - if user has multiple mobile plans
+  * Retail/dining discounts: £20-100/year (2000-10000 pence) - if overlapping discount programs
+  * Banking fee overlap: £60-180/year (6000-18000 pence) - if paying for features already included
+  * NEVER exceed £500/year (50000 pence) for a single recommendation
+  * CRITICAL: The savings number MUST match what you say in the rationale text
+  * If rationale says "£80/year", then estimated_saving_min should be 8000 (pence) and estimated_saving_max should be 8000 (pence)
+  * NEVER show "£8,000" when the actual saving is "£80/year"
   * If uncertain, use null rather than guessing high numbers
 - For benefit_match_ids field: Use benefit IDs (integers) from the provided data
 - In rationale text: Use the actual benefit TITLE, not "Benefit ID X"
-- kind must be one of: overlap, unused, switch, bundle, tip
+- kind MUST be "overlap" - only show recommendations for duplicate benefits from different memberships
 - Make rationale personal and actionable, not generic
 - Return valid JSON only, no additional text
 """

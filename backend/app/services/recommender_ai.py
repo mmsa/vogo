@@ -45,7 +45,7 @@ def build_user_payload(
 
     benefits = benefits_query.all()
 
-    # Format benefits for AI
+    # Format benefits for AI - include membership_id so AI can detect same-membership overlaps
     benefits_data = []
     for benefit in benefits:
         membership = memberships_map.get(benefit.membership_id)
@@ -53,6 +53,7 @@ def build_user_payload(
             benefits_data.append(
                 {
                     "id": benefit.id,
+                    "membership_id": benefit.membership_id,  # Include membership_id for overlap detection
                     "membership_slug": membership.provider_slug,
                     "membership_name": membership.name,
                     "title": benefit.title,
@@ -114,8 +115,26 @@ def generate_recommendations(
         recommendations = data.get("recommendations", [])[:10]
         relevant_benefits = data.get("relevant_benefits", [])[:30]
 
+        # Filter out overlap recommendations where benefits are from the same membership
+        filtered_recommendations = []
+        for rec in recommendations:
+            if rec.get("kind") == "overlap" and rec.get("benefit_match_ids"):
+                # Check if benefits are from different memberships
+                benefit_ids = rec.get("benefit_match_ids", [])
+                if len(benefit_ids) > 1:
+                    # Get membership IDs for these benefits
+                    benefit_objects = db.query(Benefit).filter(Benefit.id.in_(benefit_ids)).all()
+                    membership_ids = [b.membership_id for b in benefit_objects]
+                    
+                    # If all benefits are from the same membership, skip this recommendation
+                    if len(set(membership_ids)) == 1:
+                        print(f"Skipping overlap recommendation: all benefits from same membership {membership_ids[0]}")
+                        continue
+            
+            filtered_recommendations.append(rec)
+
         return {
-            "recommendations": recommendations,
+            "recommendations": filtered_recommendations,
             "relevant_benefits": relevant_benefits,
         }
 

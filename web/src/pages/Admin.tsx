@@ -14,6 +14,8 @@ import {
   Edit,
   ExternalLink,
   Filter,
+  RefreshCw,
+  Sparkles,
 } from "lucide-react";
 import {
   Card,
@@ -164,6 +166,11 @@ export default function Admin() {
   const [analyticsOverview, setAnalyticsOverview] = useState<any>(null);
   const [affiliateReport, setAffiliateReport] = useState<any[]>([]);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
+
+  // Cron job state
+  const [cronRunning, setCronRunning] = useState(false);
+  const [cronResult, setCronResult] = useState<any>(null);
+  const [cronLimit, setCronLimit] = useState(10);
 
   // Check if user is admin
   useEffect(() => {
@@ -567,6 +574,190 @@ export default function Admin() {
               </Card>
             </div>
           )}
+
+          {/* Benefit Discovery Cron Job */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-primary" />
+                <CardTitle>Benefit Discovery Cron Job</CardTitle>
+              </div>
+              <CardDescription>
+                Discover and add benefits for memberships that currently have no benefits
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="flex-1">
+                  <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 block">
+                    Process Limit
+                  </label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="50"
+                    value={cronLimit}
+                    onChange={(e) => setCronLimit(parseInt(e.target.value) || 10)}
+                    className="w-32"
+                    disabled={cronRunning}
+                  />
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                    Max memberships to process per run
+                  </p>
+                </div>
+                <div className="flex gap-2 pt-6">
+                  <Button
+                    onClick={async () => {
+                      setCronRunning(true);
+                      setCronResult(null);
+                      try {
+                        const result = await api.post(
+                          `/api/admin/cron/discover-benefits?limit=${cronLimit}&dry_run=true`
+                        );
+                        setCronResult(result);
+                      } catch (error: any) {
+                        setCronResult({
+                          status: "error",
+                          error: error.message || "Failed to run cron job",
+                        });
+                      } finally {
+                        setCronRunning(false);
+                      }
+                    }}
+                    variant="outline"
+                    disabled={cronRunning}
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Dry Run
+                  </Button>
+                  <Button
+                    onClick={async () => {
+                      if (
+                        !confirm(
+                          `Are you sure you want to discover benefits for up to ${cronLimit} memberships? This will use GPT web search and may take several minutes.`
+                        )
+                      ) {
+                        return;
+                      }
+                      setCronRunning(true);
+                      setCronResult(null);
+                      try {
+                        const result = await api.post(
+                          `/api/admin/cron/discover-benefits?limit=${cronLimit}&dry_run=false`
+                        );
+                        setCronResult(result);
+                        // Reload stats after successful run
+                        if (result.status === "completed") {
+                          loadStats();
+                        }
+                      } catch (error: any) {
+                        setCronResult({
+                          status: "error",
+                          error: error.message || "Failed to run cron job",
+                        });
+                      } finally {
+                        setCronRunning(false);
+                      }
+                    }}
+                    disabled={cronRunning}
+                  >
+                    {cronRunning ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        Running...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Run Now
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              {cronResult && (
+                <div
+                  className={`p-4 rounded-lg border ${
+                    cronResult.status === "error"
+                      ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
+                      : cronResult.status === "completed"
+                      ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+                      : "bg-zinc-50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800"
+                  }`}
+                >
+                  <div className="flex items-start gap-2">
+                    {cronResult.status === "error" ? (
+                      <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5" />
+                    ) : cronResult.status === "completed" ? (
+                      <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5" />
+                    ) : (
+                      <Clock className="w-5 h-5 text-zinc-600 dark:text-zinc-400 mt-0.5" />
+                    )}
+                    <div className="flex-1">
+                      <p className="font-medium text-zinc-900 dark:text-white mb-2">
+                        {cronResult.status === "error"
+                          ? "Error"
+                          : cronResult.dry_run
+                          ? "Dry Run Results"
+                          : "Cron Job Results"}
+                      </p>
+                      {cronResult.status === "error" ? (
+                        <p className="text-sm text-red-600 dark:text-red-400">
+                          {cronResult.error || "Unknown error occurred"}
+                        </p>
+                      ) : (
+                        <div className="space-y-1 text-sm text-zinc-700 dark:text-zinc-300">
+                          <p>
+                            <span className="font-medium">Processed:</span>{" "}
+                            {cronResult.processed || 0}
+                          </p>
+                          <p>
+                            <span className="font-medium">Successful:</span>{" "}
+                            <span className="text-green-600 dark:text-green-400">
+                              {cronResult.successful || 0}
+                            </span>
+                          </p>
+                          <p>
+                            <span className="font-medium">Failed:</span>{" "}
+                            <span className="text-red-600 dark:text-red-400">
+                              {cronResult.failed || 0}
+                            </span>
+                          </p>
+                          <p>
+                            <span className="font-medium">Benefits Added:</span>{" "}
+                            <span className="text-primary">
+                              {cronResult.benefits_added || 0}
+                            </span>
+                          </p>
+                          {cronResult.results && cronResult.results.length > 0 && (
+                            <div className="mt-3 pt-3 border-t border-zinc-200 dark:border-zinc-700">
+                              <p className="font-medium mb-2">Details:</p>
+                              <div className="space-y-1 max-h-40 overflow-y-auto">
+                                {cronResult.results.map((r: any, idx: number) => (
+                                  <p
+                                    key={idx}
+                                    className="text-xs text-zinc-600 dark:text-zinc-400"
+                                  >
+                                    {r.membership_name}:{" "}
+                                    {r.status === "success"
+                                      ? `✅ Added ${r.benefits_added} benefits`
+                                      : r.status === "failed"
+                                      ? `❌ ${r.reason || "Failed"}`
+                                      : r.status}
+                                  </p>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Users Section */}
           <Card>

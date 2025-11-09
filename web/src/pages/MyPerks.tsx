@@ -1,27 +1,27 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Plus, 
-  Search, 
-  Filter, 
-  Plane, 
-  ShoppingBag, 
-  CreditCard as CreditCardIcon, 
+import {
+  Plus,
+  Search,
+  Filter,
+  Plane,
+  ShoppingBag,
+  CreditCard as CreditCardIcon,
   Smartphone,
   Film,
   Shield,
   ChevronDown,
   AlertTriangle,
   CheckCircle,
-  Sparkles
+  Sparkles,
 } from "lucide-react";
-import { 
-  api, 
-  Membership, 
+import {
+  api,
+  Membership,
   Benefit,
   SmartAddOut,
   ValidateMembershipResponse,
-  DiscoverMembershipResponse 
+  DiscoverMembershipResponse,
 } from "@/lib/api";
 import { useAuth } from "@/store/auth";
 import { SectionHeader } from "@/components/SectionHeader";
@@ -43,13 +43,40 @@ import {
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/Alert";
 
 // Category icons
-const CATEGORY_ICONS: Record<string, { icon: any; color: string; emoji: string }> = {
-  travel: { icon: Plane, color: "text-blue-600 dark:text-blue-400", emoji: "✈️" },
-  retail: { icon: ShoppingBag, color: "text-pink-600 dark:text-pink-400", emoji: "🛍" },
-  banking: { icon: CreditCardIcon, color: "text-green-600 dark:text-green-400", emoji: "💳" },
-  mobile: { icon: Smartphone, color: "text-purple-600 dark:text-purple-400", emoji: "📱" },
-  entertainment: { icon: Film, color: "text-orange-600 dark:text-orange-400", emoji: "🎬" },
-  insurance: { icon: Shield, color: "text-red-600 dark:text-red-400", emoji: "🛡" },
+const CATEGORY_ICONS: Record<
+  string,
+  { icon: any; color: string; emoji: string }
+> = {
+  travel: {
+    icon: Plane,
+    color: "text-blue-600 dark:text-blue-400",
+    emoji: "✈️",
+  },
+  retail: {
+    icon: ShoppingBag,
+    color: "text-pink-600 dark:text-pink-400",
+    emoji: "🛍",
+  },
+  banking: {
+    icon: CreditCardIcon,
+    color: "text-green-600 dark:text-green-400",
+    emoji: "💳",
+  },
+  mobile: {
+    icon: Smartphone,
+    color: "text-purple-600 dark:text-purple-400",
+    emoji: "📱",
+  },
+  entertainment: {
+    icon: Film,
+    color: "text-orange-600 dark:text-orange-400",
+    emoji: "🎬",
+  },
+  insurance: {
+    icon: Shield,
+    color: "text-red-600 dark:text-red-400",
+    emoji: "🛡",
+  },
 };
 
 const CATEGORIES = Object.keys(CATEGORY_ICONS);
@@ -70,19 +97,27 @@ export default function MyPerks() {
   const [adding, setAdding] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [expandedMemberships, setExpandedMemberships] = useState<Set<number>>(new Set());
-  const [removingMembership, setRemovingMembership] = useState<number | null>(null);
-  
+  const [expandedMemberships, setExpandedMemberships] = useState<Set<number>>(
+    new Set()
+  );
+  const [removingMembership, setRemovingMembership] = useState<number | null>(
+    null
+  );
+
   // Add membership state
   const [showCreateMode, setShowCreateMode] = useState(false);
   const [newMembershipName, setNewMembershipName] = useState("");
   const [validating, setValidating] = useState(false);
-  const [validationResult, setValidationResult] = useState<ValidateMembershipResponse | null>(null);
+  const [validationResult, setValidationResult] =
+    useState<ValidateMembershipResponse | null>(null);
   const [discovering, setDiscovering] = useState(false);
-  const [discoveryResult, setDiscoveryResult] = useState<DiscoverMembershipResponse | null>(null);
+  const [discoveryResult, setDiscoveryResult] =
+    useState<DiscoverMembershipResponse | null>(null);
   const [modalSearchTerm, setModalSearchTerm] = useState("");
   const [smartCheck, setSmartCheck] = useState<SmartAddOut | null>(null);
-  const [checkingMembership, setCheckingMembership] = useState<number | null>(null);
+  const [checkingMembership, setCheckingMembership] = useState<number | null>(
+    null
+  );
 
   useEffect(() => {
     if (user?.id) {
@@ -92,7 +127,7 @@ export default function MyPerks() {
 
   const loadData = async () => {
     if (!user?.id) return;
-    
+
     try {
       setLoading(true);
       const [allMemberships, userBenefits] = await Promise.all([
@@ -116,79 +151,107 @@ export default function MyPerks() {
 
   // Group memberships by category
   const membershipsByCategory = useMemo(() => {
-    const userMemberships = memberships.filter(m => userMembershipIds.includes(m.id));
-    
+    const userMemberships = memberships.filter((m) =>
+      userMembershipIds.includes(m.id)
+    );
+
     const grouped: Record<string, MembershipWithBenefits[]> = {};
-    
-    userMemberships.forEach(membership => {
-      const membershipBenefits = benefits.filter(b => b.membership_id === membership.id);
+
+    userMemberships.forEach((membership) => {
+      const membershipBenefits = benefits.filter(
+        (b) => b.membership_id === membership.id
+      );
       const enrichedMembership: MembershipWithBenefits = {
         ...membership,
         benefits: membershipBenefits,
       };
-      
+
       // Categorize by provider slug or benefit category
       let category = "other";
       const slug = membership.provider_slug.toLowerCase();
-      
-      if (slug.includes("amex") || slug.includes("chase") || slug.includes("lloyds") || slug.includes("hsbc") || slug.includes("barclays")) {
+
+      if (
+        slug.includes("amex") ||
+        slug.includes("chase") ||
+        slug.includes("lloyds") ||
+        slug.includes("hsbc") ||
+        slug.includes("barclays")
+      ) {
         category = "banking";
-      } else if (slug.includes("ee") || slug.includes("vodafone") || slug.includes("o2") || slug.includes("three")) {
+      } else if (
+        slug.includes("ee") ||
+        slug.includes("vodafone") ||
+        slug.includes("o2") ||
+        slug.includes("three")
+      ) {
         category = "mobile";
-      } else if (slug.includes("aa") || slug.includes("british-airways") || slug.includes("hilton")) {
+      } else if (
+        slug.includes("aa") ||
+        slug.includes("british-airways") ||
+        slug.includes("hilton")
+      ) {
         category = "travel";
       } else if (slug.includes("amazon") || slug.includes("tesco")) {
         category = "retail";
-      } else if (membershipBenefits.some(b => b.category?.includes("travel"))) {
+      } else if (
+        membershipBenefits.some((b) => b.category?.includes("travel"))
+      ) {
         category = "travel";
-      } else if (membershipBenefits.some(b => b.category?.includes("shopping") || b.category?.includes("retail"))) {
+      } else if (
+        membershipBenefits.some(
+          (b) =>
+            b.category?.includes("shopping") || b.category?.includes("retail")
+        )
+      ) {
         category = "retail";
       }
-      
+
       if (!grouped[category]) {
         grouped[category] = [];
       }
       grouped[category].push(enrichedMembership);
     });
-    
+
     return grouped;
   }, [memberships, userMembershipIds, benefits]);
 
   // Detect duplicate benefits
   const duplicateBenefits = useMemo(() => {
     const benefitMap = new Map<string, Benefit[]>();
-    
-    benefits.forEach(benefit => {
+
+    benefits.forEach((benefit) => {
       const key = benefit.title.toLowerCase().trim();
       if (!benefitMap.has(key)) {
         benefitMap.set(key, []);
       }
       benefitMap.get(key)!.push(benefit);
     });
-    
+
     const duplicates = new Map<number, string[]>();
     benefitMap.forEach((benefitList, key) => {
       if (benefitList.length > 1) {
-        benefitList.forEach(b => {
+        benefitList.forEach((b) => {
           if (!duplicates.has(b.id)) {
             duplicates.set(b.id, []);
           }
           const otherMemberships = benefitList
-            .filter(other => other.membership_id !== b.membership_id)
-            .map(other => {
-              const membership = memberships.find(m => m.id === other.membership_id);
+            .filter((other) => other.membership_id !== b.membership_id)
+            .map((other) => {
+              const membership = memberships.find(
+                (m) => m.id === other.membership_id
+              );
               return membership?.name || "Unknown";
             });
           duplicates.set(b.id, otherMemberships);
         });
       }
     });
-    
+
     return duplicates;
   }, [benefits, memberships]);
 
   const toggleMembership = (membershipId: number) => {
-    setExpandedMemberships(prev => {
+    setExpandedMemberships((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(membershipId)) {
         newSet.delete(membershipId);
@@ -263,23 +326,29 @@ export default function MyPerks() {
 
   const handleValidateMembership = async () => {
     if (!newMembershipName.trim()) return;
-    
+
     try {
       setValidating(true);
       setValidationResult(null);
       setDiscoveryResult(null);
-      
+
       const result = await api.validateMembershipName({
         user_id: user.id,
-        name: newMembershipName.trim()
+        name: newMembershipName.trim(),
       });
-      
+
       setValidationResult(result);
-      
+
       if (result.status === "exists" && result.existing_membership) {
         if (!userMembershipIds.includes(result.existing_membership.id)) {
           setSelectedMemberships([result.existing_membership.id]);
         }
+        // Exit create mode after a short delay so user can see the success message
+        setTimeout(() => {
+          setShowCreateMode(false);
+          setNewMembershipName("");
+          setValidationResult(null);
+        }, 2000);
       }
     } catch (error) {
       console.error("Failed to validate membership:", error);
@@ -287,7 +356,7 @@ export default function MyPerks() {
         status: "invalid",
         confidence: 0,
         reason: "Failed to validate. Please try again.",
-        suggestions: []
+        suggestions: [],
       });
     } finally {
       setValidating(false);
@@ -296,27 +365,75 @@ export default function MyPerks() {
 
   const handleDiscoverMembership = async () => {
     if (!validationResult || validationResult.status === "invalid") return;
-    
-    const nameToUse = validationResult.normalized_name || newMembershipName.trim();
-    
+
+    const nameToUse =
+      validationResult.normalized_name || newMembershipName.trim();
+
     try {
       setDiscovering(true);
-      
+
+      // Exit create mode immediately so user can see the discovery happening
+      setShowCreateMode(false);
+      setNewMembershipName("");
+      setValidationResult(null);
+      setDiscoveryResult(null);
+
       const result = await api.discoverMembership({
         user_id: user.id,
-        name: nameToUse
+        name: nameToUse,
       });
-      
-      setDiscoveryResult(result);
+
       await loadData();
-      
+
       if (!userMembershipIds.includes(result.membership.id)) {
         setSelectedMemberships([result.membership.id]);
       }
     } catch (error) {
       console.error("Failed to discover membership:", error);
+      // TODO: Show error toast
     } finally {
       setDiscovering(false);
+    }
+  };
+
+  const handleUseSuggestion = async (suggestion: string) => {
+    setNewMembershipName(suggestion);
+    setValidationResult(null);
+    setDiscoveryResult(null);
+
+    // Auto-validate the suggestion
+    try {
+      setValidating(true);
+
+      const result = await api.validateMembershipName({
+        user_id: user.id,
+        name: suggestion.trim(),
+      });
+
+      setValidationResult(result);
+
+      // If it exists, suggest adding it directly
+      if (result.status === "exists" && result.existing_membership) {
+        if (!userMembershipIds.includes(result.existing_membership.id)) {
+          setSelectedMemberships([result.existing_membership.id]);
+        }
+        // Exit create mode after a short delay so user can see the success message
+        setTimeout(() => {
+          setShowCreateMode(false);
+          setNewMembershipName("");
+          setValidationResult(null);
+        }, 2000);
+      }
+    } catch (error) {
+      console.error("Failed to validate membership:", error);
+      setValidationResult({
+        status: "invalid",
+        confidence: 0,
+        reason: "Failed to validate. Please try again.",
+        suggestions: [],
+      });
+    } finally {
+      setValidating(false);
     }
   };
 
@@ -333,7 +450,7 @@ export default function MyPerks() {
     );
   }
 
-  const filteredCategories = activeCategory 
+  const filteredCategories = activeCategory
     ? [activeCategory]
     : Object.keys(membershipsByCategory);
 
@@ -408,12 +525,13 @@ export default function MyPerks() {
         <div className="space-y-6">
           {filteredCategories.map((category, catIndex) => {
             const categoryMemberships = membershipsByCategory[category];
-            if (!categoryMemberships || categoryMemberships.length === 0) return null;
+            if (!categoryMemberships || categoryMemberships.length === 0)
+              return null;
 
-            const config = CATEGORY_ICONS[category] || { 
-              icon: CreditCardIcon, 
-              color: "text-zinc-600", 
-              emoji: "📋" 
+            const config = CATEGORY_ICONS[category] || {
+              icon: CreditCardIcon,
+              color: "text-zinc-600",
+              emoji: "📋",
             };
             const Icon = config.icon;
 
@@ -425,20 +543,26 @@ export default function MyPerks() {
                 transition={{ delay: catIndex * 0.1 }}
               >
                 <div className="flex items-center gap-3 mb-4">
-                  <div className={`p-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 ${config.color}`}>
+                  <div
+                    className={`p-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 ${config.color}`}
+                  >
                     <Icon className="w-5 h-5" />
                   </div>
                   <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 capitalize">
                     {config.emoji} {category}
                   </h2>
-                  <Badge variant="secondary">{categoryMemberships.length}</Badge>
+                  <Badge variant="secondary">
+                    {categoryMemberships.length}
+                  </Badge>
                 </div>
 
                 <div className="space-y-4">
                   {categoryMemberships.map((membership, index) => {
                     const isExpanded = expandedMemberships.has(membership.id);
-                    const hasDuplicates = membership.benefits.some(b => 
-                      duplicateBenefits.has(b.id) && duplicateBenefits.get(b.id)!.length > 0
+                    const hasDuplicates = membership.benefits.some(
+                      (b) =>
+                        duplicateBenefits.has(b.id) &&
+                        duplicateBenefits.get(b.id)!.length > 0
                     );
 
                     return (
@@ -468,7 +592,8 @@ export default function MyPerks() {
                                   )}
                                 </div>
                                 <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                                  {membership.benefits.length} benefit{membership.benefits.length !== 1 ? 's' : ''}
+                                  {membership.benefits.length} benefit
+                                  {membership.benefits.length !== 1 ? "s" : ""}
                                 </p>
                               </div>
                               <div className="flex items-center gap-3">
@@ -479,9 +604,13 @@ export default function MyPerks() {
                                     e.stopPropagation();
                                     handleRemoveMembership(membership.id);
                                   }}
-                                  disabled={removingMembership === membership.id}
+                                  disabled={
+                                    removingMembership === membership.id
+                                  }
                                 >
-                                  {removingMembership === membership.id ? "Removing..." : "Remove"}
+                                  {removingMembership === membership.id
+                                    ? "Removing..."
+                                    : "Remove"}
                                 </Button>
                                 <ChevronDown
                                   className={`w-5 h-5 text-zinc-400 transition-transform ${
@@ -509,21 +638,28 @@ export default function MyPerks() {
                                     </p>
                                   ) : (
                                     membership.benefits.map((benefit) => {
-                                      const isDuplicate = duplicateBenefits.has(benefit.id);
-                                      const duplicateWith = isDuplicate 
+                                      const isDuplicate = duplicateBenefits.has(
+                                        benefit.id
+                                      );
+                                      const duplicateWith = isDuplicate
                                         ? duplicateBenefits.get(benefit.id)!
                                         : [];
 
                                       return (
-                                        <div key={benefit.id} className="relative">
-                                          {isDuplicate && duplicateWith.length > 0 && (
-                                            <div className="mb-2 flex items-center gap-2 text-xs text-amber-600 dark:text-amber-500">
-                                              <AlertTriangle className="w-4 h-4" />
-                                              <span>
-                                                ⚠️ Duplicate: Also available via {duplicateWith.join(", ")}
-                                              </span>
-                                            </div>
-                                          )}
+                                        <div
+                                          key={benefit.id}
+                                          className="relative"
+                                        >
+                                          {isDuplicate &&
+                                            duplicateWith.length > 0 && (
+                                              <div className="mb-2 flex items-center gap-2 text-xs text-amber-600 dark:text-amber-500">
+                                                <AlertTriangle className="w-4 h-4" />
+                                                <span>
+                                                  ⚠️ Duplicate: Also available
+                                                  via {duplicateWith.join(", ")}
+                                                </span>
+                                              </div>
+                                            )}
                                           <BenefitCard benefit={benefit} />
                                         </div>
                                       );
@@ -550,8 +686,8 @@ export default function MyPerks() {
         <DialogHeader>
           <DialogTitle>Add Memberships</DialogTitle>
           <DialogDescription>
-            {showCreateMode 
-              ? "Discover a new membership with AI" 
+            {showCreateMode
+              ? "Discover a new membership with AI"
               : "Select from catalog or create new"}
           </DialogDescription>
         </DialogHeader>
@@ -580,9 +716,12 @@ export default function MyPerks() {
 
               <div className="space-y-3 max-h-96 overflow-y-auto">
                 {memberships
-                  .filter((m) => 
-                    modalSearchTerm === "" ||
-                    m.name.toLowerCase().includes(modalSearchTerm.toLowerCase())
+                  .filter(
+                    (m) =>
+                      modalSearchTerm === "" ||
+                      m.name
+                        .toLowerCase()
+                        .includes(modalSearchTerm.toLowerCase())
                   )
                   .map((membership) => (
                     <div
@@ -644,24 +783,79 @@ export default function MyPerks() {
               {validationResult && (
                 <Alert
                   variant={
-                    validationResult.status === "valid" || validationResult.status === "exists"
+                    validationResult.status === "valid" ||
+                    validationResult.status === "exists"
                       ? "success"
                       : "warning"
                   }
                 >
                   <AlertTitle>{validationResult.reason}</AlertTitle>
                   <AlertDescription>
-                    {validationResult.status === "valid" && !discoveryResult && (
-                      <Button
-                        className="mt-3 gap-2"
-                        onClick={handleDiscoverMembership}
-                        disabled={discovering}
-                        size="sm"
-                      >
-                        <Sparkles className="w-4 h-4" />
-                        {discovering ? "Discovering..." : "Discover Benefits"}
-                      </Button>
-                    )}
+                    {validationResult.normalized_name &&
+                      validationResult.status !== "exists" && (
+                        <p className="text-sm font-medium mb-2">
+                          Normalized: {validationResult.normalized_name}
+                        </p>
+                      )}
+
+                    {validationResult.suggestions &&
+                      validationResult.suggestions.length > 0 && (
+                        <div className="mt-2">
+                          <p className="text-xs font-medium mb-1">
+                            Suggestions:
+                          </p>
+                          <div className="flex flex-wrap gap-1">
+                            {validationResult.suggestions.map(
+                              (suggestion, idx) => (
+                                <Button
+                                  key={idx}
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-xs"
+                                  onClick={() =>
+                                    handleUseSuggestion(suggestion)
+                                  }
+                                >
+                                  {suggestion}
+                                </Button>
+                              )
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                    {validationResult.status === "valid" &&
+                      !discoveryResult && (
+                        <Button
+                          className="mt-3 gap-2"
+                          onClick={handleDiscoverMembership}
+                          disabled={discovering}
+                          size="sm"
+                        >
+                          <Sparkles className="w-4 h-4" />
+                          {discovering ? "Discovering..." : "Discover Benefits"}
+                        </Button>
+                      )}
+
+                    {validationResult.status === "exists" &&
+                      validationResult.existing_membership && (
+                        <div className="mt-3 p-2 bg-green-50 dark:bg-green-900/20 rounded text-xs">
+                          {userMembershipIds.includes(
+                            validationResult.existing_membership.id
+                          ) ? (
+                            <>
+                              ✓ You already have this membership! No need to add
+                              it again.
+                            </>
+                          ) : (
+                            <>
+                              ✓ This membership is already in our catalog and
+                              has been selected for you! Returning to catalog in
+                              a moment...
+                            </>
+                          )}
+                        </div>
+                      )}
                   </AlertDescription>
                 </Alert>
               )}
@@ -700,4 +894,3 @@ export default function MyPerks() {
     </div>
   );
 }
-

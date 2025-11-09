@@ -8,6 +8,7 @@ from app.core.db import get_db
 from app.core.auth import get_current_user, require_role
 from app.models import User, Benefit, Membership, UserMembership, AnalyticsEvent
 from app.schemas import UserRead, AdminUserUpdate, UserListResponse
+from app.services.benefit_discovery_cron import discover_benefits_for_memberships_without_benefits
 import json
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -686,3 +687,48 @@ def get_affiliate_report(
         "total_clicks": sum(item["total_clicks"] for item in report),
         "items": report[:50],  # Top 50
     }
+
+
+# ============================================================================
+# CRON JOB ENDPOINTS
+# ============================================================================
+
+
+@router.post(
+    "/cron/discover-benefits",
+    dependencies=[Depends(require_role("admin"))],
+)
+def trigger_benefit_discovery_cron(
+    limit: int = Query(10, ge=1, le=50, description="Max memberships to process"),
+    dry_run: bool = Query(False, description="If true, only simulate without making changes"),
+    db: Session = Depends(get_db),
+):
+    """
+    Trigger cron job to discover and add benefits for memberships without benefits.
+    
+    This endpoint:
+    1. Finds memberships with no benefits (or only placeholder benefits)
+    2. Uses GPT web search to discover benefits
+    3. Adds discovered benefits to those memberships
+    
+    Can be called manually or scheduled via cron.
+    
+    Args:
+        limit: Maximum number of memberships to process per run
+        dry_run: If True, only logs what would be done without making changes
+        
+    Returns:
+        Dict with statistics about the run
+    """
+    try:
+        result = discover_benefits_for_memberships_without_benefits(
+            db=db,
+            limit=limit,
+            dry_run=dry_run
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Cron job failed: {str(e)}"
+        )

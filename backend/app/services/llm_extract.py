@@ -20,7 +20,8 @@ class BenefitDTO(BaseModel):
         pattern="^(travel|insurance|breakdown_cover|retail|dining|mobile|energy|banking|electronics|lounge_access|cashback|device_insurance|travel_insurance|finance|other)$",
         description="Benefit category"
     )
-    vendor_domain: str | None = Field(None, description="Vendor domain if mentioned")
+    vendor_domain: str | None = Field(None, description="Vendor domain if mentioned (e.g., 'amazon.co.uk')")
+    vendor_name: str | None = Field(None, description="Vendor/retailer name if mentioned (e.g., 'Amazon')")
     source_url: str = Field(..., description="URL where benefit was found")
 
 
@@ -29,17 +30,25 @@ class ExtractionResult(BaseModel):
     benefits: List[BenefitDTO]
 
 
-EXTRACTION_PROMPT = """You are an expert at extracting membership benefits from web pages. 
-Your goal is to identify FACTUAL benefit items that members receive.
+EXTRACTION_PROMPT = """You are an expert at extracting membership benefits from web pages found via internet search. 
+Your goal is to identify FACTUAL benefit items that members receive from the internet search results provided.
+
+IMPORTANT: The text provided below comes from web pages found by searching the internet for "{membership_name} membership benefits". 
+Your task is to extract concrete, specific benefits that are mentioned in these internet search results.
 
 RULES:
-1. Extract only EXPLICIT benefits mentioned in the text
-2. NO guesses or assumptions
-3. Keep titles under 80 characters
-4. Keep descriptions under 220 characters
-5. Be specific and factual
-6. Include the source URL for each benefit
-7. Use the exact category from the allowed list
+1. Extract only EXPLICIT benefits mentioned in the text from internet search results
+2. NO guesses or assumptions - only extract what is clearly stated in the web pages
+3. Search through the provided text carefully - these are real web pages found via internet search
+4. Keep titles under 80 characters
+5. Keep descriptions under 220 characters
+6. Be specific and factual - extract real benefits that exist on the internet
+7. Include the source URL for each benefit (from the internet search results provided)
+8. Use the exact category from the allowed list
+9. Extract vendor_domain (e.g., "amazon.co.uk", "booking.com") if the benefit mentions a specific vendor
+10. Extract vendor_name (e.g., "Amazon", "Booking.com") if mentioned - this is the human-readable vendor name
+11. If vendor_domain is provided but vendor_name is not, infer vendor_name from vendor_domain
+12. Look for benefits that are actually mentioned on the web pages - these are real internet sources
 
 ALLOWED CATEGORIES:
 - travel: General travel perks
@@ -106,13 +115,22 @@ def extract_benefits_from_pages(
         ]
     }
     
+    # Format the prompt with membership name
+    formatted_prompt = EXTRACTION_PROMPT.replace("{membership_name}", membership_name)
+    
     for attempt in range(max_retries + 1):
         try:
+            print(f"  📞 Calling GPT-4o-mini (attempt {attempt + 1}/{max_retries + 1}) to extract benefits from internet search results...")
             response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-4o-mini",  # Using GPT-4o-mini to extract benefits from internet search results
                 messages=[
-                    {"role": "system", "content": EXTRACTION_PROMPT},
-                    {"role": "user", "content": json.dumps(input_data, indent=2)}
+                    {"role": "system", "content": formatted_prompt},
+                    {"role": "user", "content": f"""Extract benefits from the following internet search results for "{membership_name}".
+
+These web pages were found by searching the internet for "{membership_name} membership benefits". 
+Please extract all concrete benefits mentioned in these pages:
+
+{json.dumps(input_data, indent=2)}"""}
                 ],
                 temperature=0.3,  # Low temperature for factual extraction
                 response_format={"type": "json_object"}

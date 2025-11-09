@@ -310,6 +310,18 @@ def generate_llm_recommendations(
         try:
             # Validate benefit IDs
             benefit_ids = resolve_benefit_ids(db, rec_data.get("benefit_match_ids", []))
+            
+            # CRITICAL: Only show overlap recommendations if benefits are from DIFFERENT memberships
+            if rec_data.get("kind") == "overlap" and len(benefit_ids) > 1:
+                # Get the membership IDs for these benefits
+                benefit_objects = db.query(Benefit).filter(Benefit.id.in_(benefit_ids)).all()
+                membership_ids = [b.membership_id for b in benefit_objects]
+                
+                # If all benefits are from the same membership, skip this recommendation
+                if len(set(membership_ids)) == 1:
+                    print(f"Skipping overlap recommendation: all benefits from same membership {membership_ids[0]}")
+                    continue
+            
             rec_data["benefit_match_ids"] = benefit_ids
 
             rec = RecommendationDTO(**rec_data)

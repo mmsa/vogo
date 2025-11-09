@@ -28,11 +28,59 @@ export default function Dashboard() {
     
     try {
       setLoading(true);
-      const [benefitsData, recsData] = await Promise.all([
-        api.getUserBenefits(user.id),
-        api.getRecommendations(user.id),
-      ]);
+      
+      // Load benefits first (fast, no filtering needed)
+      const benefitsData = await api.getUserBenefits(user.id);
       setBenefits(benefitsData);
+      
+      // Check cache first for faster loading (AI mode only)
+      const cachedAI = localStorage.getItem("vogo_cache_ai");
+      if (cachedAI) {
+        try {
+          const cached = JSON.parse(cachedAI);
+          const filteredCached = cached.recs.filter(
+            (rec: Recommendation) => rec.kind === "overlap" || rec.kind === "tip"
+          );
+          // Deduplicate by title to avoid duplicates
+          const uniqueCached = filteredCached.filter((rec: Recommendation, index: number, self: Recommendation[]) => 
+            index === self.findIndex((r) => r.title === rec.title && r.kind === rec.kind)
+          );
+          setRecommendations(uniqueCached);
+          setLoading(false);
+          
+          // Load fresh data in background (non-blocking)
+          api.getLLMRecommendations({ user_id: user.id })
+            .then(data => {
+              const filteredRecs = data.recommendations.filter(
+                (rec: Recommendation) => rec.kind === "overlap" || rec.kind === "tip"
+              );
+              // Deduplicate by title to avoid duplicates
+              const uniqueRecs = filteredRecs.filter((rec: Recommendation, index: number, self: Recommendation[]) => 
+                index === self.findIndex((r) => r.title === rec.title && r.kind === rec.kind)
+              );
+              setRecommendations(uniqueRecs);
+              // Update cache
+              localStorage.setItem("vogo_cache_ai", JSON.stringify({
+                recs: uniqueRecs,
+                benefits: data.relevant_benefits,
+              }));
+            })
+            .catch(err => console.error("Background refresh failed:", err));
+          return;
+        } catch (e) {
+          // Cache parse failed, continue to load fresh
+          console.error("Cache parse error:", e);
+        }
+      }
+      
+      // Load fresh recommendations (only if no cache)
+      const recsData = await api.getLLMRecommendations({ user_id: user.id }).then(data => {
+        const filtered = data.recommendations.filter((rec: Recommendation) => rec.kind === "overlap" || rec.kind === "tip");
+        // Deduplicate by title to avoid duplicates
+        return filtered.filter((rec: Recommendation, index: number, self: Recommendation[]) => 
+          index === self.findIndex((r) => r.title === rec.title && r.kind === rec.kind)
+        );
+      });
       setRecommendations(recsData);
     } catch (error) {
       console.error("Failed to load dashboard data:", error);
@@ -45,10 +93,13 @@ export default function Dashboard() {
   const uniqueMemberships = new Set(benefits.map((b) => b.membership_id));
   const membershipCount = uniqueMemberships.size;
 
-  // Calculate potential savings
+  // Calculate potential savings (convert from pence to pounds)
+  // Recommendations are already filtered for overlap/tip and deduplicated when loaded
   const potentialSavings = recommendations.reduce((total, rec) => {
-    if (rec.estimated_saving_min) {
-      return total + rec.estimated_saving_min;
+    // Double-check kind filter (should already be filtered, but be safe)
+    if ((rec.kind === "overlap" || rec.kind === "tip") && rec.estimated_saving_min) {
+      // estimated_saving_min is in pence, convert to pounds
+      return total + (rec.estimated_saving_min / 100);
     }
     return total;
   }, 0);
@@ -131,6 +182,7 @@ export default function Dashboard() {
           value={membershipCount}
           iconColor="bg-primary/10 text-primary"
           delay={0}
+          href="/my-perks"
         />
         <StatCard
           icon={Gift}
@@ -138,6 +190,7 @@ export default function Dashboard() {
           value={benefits.length}
           iconColor="bg-accent/10 text-accent"
           delay={100}
+          href="/benefits"
         />
         <StatCard
           icon={Lightbulb}
@@ -145,6 +198,7 @@ export default function Dashboard() {
           value={recommendations.length}
           iconColor="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-500"
           delay={200}
+          href="/recommendations"
         />
         <StatCard
           icon={TrendingUp}
@@ -152,6 +206,7 @@ export default function Dashboard() {
           value={`£${potentialSavings.toLocaleString()}`}
           iconColor="bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-500"
           delay={300}
+          href="/recommendations"
         />
       </div>
 

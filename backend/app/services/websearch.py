@@ -40,25 +40,74 @@ def search_membership_sites(query: str, limit: int = 5) -> List[Dict[str, str]]:
     Returns:
         List of dicts with 'url', 'title', 'snippet'
     """
-    try:
-        ddgs = DDGS()
-        results = ddgs.text(query, max_results=limit)
+    import time
 
-        formatted_results = []
-        for r in results:
-            if "http" in r.get("href", ""):
-                formatted_results.append(
-                    {
-                        "url": r["href"],
-                        "title": r.get("title", ""),
-                        "snippet": r.get("body", ""),
-                    }
+    # Try multiple times with delays (DuckDuckGo can be rate-limited)
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            if attempt > 0:
+                delay = 2 * attempt  # Exponential backoff: 2s, 4s
+                print(
+                    f"  ⏳ Retrying search (attempt {attempt + 1}/{max_retries}) after {delay}s delay..."
                 )
+                time.sleep(delay)
 
-        return formatted_results[:limit]
-    except Exception as e:
-        print(f"Search failed: {e}")
-        return []
+            ddgs = DDGS()
+            print(f"  🔎 Executing DuckDuckGo search: '{query}'")
+
+            # Try with different parameters
+            try:
+                # First try: standard search
+                results = ddgs.text(query, max_results=limit)
+            except Exception as e1:
+                print(
+                    f"  ⚠️ Standard search failed: {e1}, trying with different params..."
+                )
+                # Try with safesearch off and different region
+                try:
+                    results = ddgs.text(query, max_results=limit, safesearch="off")
+                except Exception as e2:
+                    print(f"  ⚠️ Alternative search also failed: {e2}")
+                    raise e1
+
+            # Convert generator to list to check if we got results
+            results_list = list(results) if results else []
+            print(f"  📊 DuckDuckGo returned {len(results_list)} raw results")
+
+            formatted_results = []
+            for r in results_list:
+                href = r.get("href", "")
+                if href and "http" in href:
+                    formatted_results.append(
+                        {
+                            "url": href,
+                            "title": r.get("title", ""),
+                            "snippet": r.get("body", ""),
+                        }
+                    )
+                    print(f"    ✓ Found: {r.get('title', href)}")
+
+            if formatted_results:
+                print(f"  ✅ Formatted {len(formatted_results)} valid results")
+                return formatted_results[:limit]
+            elif attempt < max_retries - 1:
+                print(f"  ⚠️ No results found, will retry...")
+                continue
+            else:
+                print(f"  ⚠️ No results after {max_retries} attempts")
+                return []
+
+        except Exception as e:
+            print(f"  ❌ DuckDuckGo search failed (attempt {attempt + 1}): {e}")
+            if attempt == max_retries - 1:
+                import traceback
+
+                traceback.print_exc()
+                return []
+            # Continue to retry
+
+    return []
 
 
 def fetch_text(url: str, timeout: int = 12) -> Dict[str, str]:
