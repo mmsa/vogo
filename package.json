@@ -1,0 +1,25 @@
+{
+  "name": "vogoplus-app",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm:dev:db\" \"npm:dev:backend\" \"npm:dev:frontend\"",
+    "dev:db": "cd ops && docker compose up -d db",
+    "dev:backend": "bash scripts/dev-local.sh",
+    "dev:frontend": "cd web && npm run dev",
+    "dev:webext": "cd webext && npm run dev",
+    "build": "npm run build:frontend && npm run build:webext",
+    "build:frontend": "cd web && npm run build",
+    "build:webext": "cd webext && npm run build",
+    "start:backend": "bash START_BACKEND.sh",
+    "start:prod": "bash scripts/local-deploy.sh",
+    "db:up": "cd ops && docker compose up -d db",
+    "db:down": "cd ops && docker compose down",
+    "db:logs": "cd ops && docker compose logs -f db",
+    "setup": "bash scripts/setup-local.sh"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
+

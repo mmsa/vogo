@@ -2,12 +2,11 @@
 
 import json
 import orjson
-from openai import OpenAI
 from cachetools import TTLCache
-from app.core.config import settings
+from app.core.openai_client import get_openai_client
 
-# Initialize OpenAI client
-client = OpenAI(api_key=settings.openai_api_key) if settings.openai_api_key else None
+# Get shared OpenAI client
+client = get_openai_client()
 
 # Cache responses for 15 minutes
 cache = TTLCache(maxsize=512, ttl=900)

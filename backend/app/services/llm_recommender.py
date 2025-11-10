@@ -2,11 +2,11 @@
 
 import json
 from typing import List, Dict, Any, Optional, Tuple
-from openai import OpenAI
 from sqlalchemy.orm import Session
 from pydantic import ValidationError
 
 from app.core.config import settings
+from app.core.openai_client import get_openai_client
 from app.models import Benefit, UserMembership, Membership, Recommendation
 from app.schemas.llm import RecommendationDTO, LLMRecommendationOut
 from app.schemas.benefit import BenefitRead
@@ -16,7 +16,7 @@ from app.services.membership_tiers import get_plan_tier, is_upgrade
 from sqlalchemy.orm import defer
 
 
-client = OpenAI(api_key=settings.openai_api_key) if settings.openai_api_key else None
+client = get_openai_client()
 
 
 def _generate_mock_recommendations(

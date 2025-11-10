@@ -31,14 +31,19 @@ export default function Login() {
       });
 
       if (!response.ok) {
+        // Handle 404 specifically
+        if (response.status === 404) {
+          throw new Error("API endpoint not found. Please check if the backend is running.");
+        }
         const data = await response.json().catch(() => ({}));
-        throw new Error(data.detail || "Login failed");
+        throw new Error(data.detail || `Login failed (${response.status})`);
       }
 
       const data = await response.json();
       await login(data.access_token, data.refresh_token);
       navigate("/");
     } catch (err: any) {
+      console.error("Login error:", err);
       setError(err.message || "Invalid email or password");
     } finally {
       setLoading(false);

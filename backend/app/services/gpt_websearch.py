@@ -2,12 +2,12 @@
 
 import json
 from typing import List, Dict, Any, Tuple
-from openai import OpenAI
 from pydantic import BaseModel, Field, ValidationError
 from app.core.config import settings
+from app.core.openai_client import get_openai_client
 from app.services.websearch import search_membership_sites
 
-client = OpenAI(api_key=settings.openai_api_key) if settings.openai_api_key else None
+client = get_openai_client()
 
 
 class BenefitSearchResult(BaseModel):

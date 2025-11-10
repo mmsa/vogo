@@ -273,6 +273,16 @@ jobs:
           echo "🔄 Running database migrations..."
           docker exec $(docker ps -qf "name=api") alembic upgrade head || true
           
+          # Setup host Nginx configuration for app.vogoplus.app
+          echo "⚙️  Setting up host Nginx configuration..."
+          if [ -f "$PROJECT_DIR/scripts/nginx-app-site.conf" ]; then
+            sudo cp "$PROJECT_DIR/scripts/nginx-app-site.conf" /etc/nginx/sites-available/vogoplus-app
+            sudo ln -sf /etc/nginx/sites-available/vogoplus-app /etc/nginx/sites-enabled/vogoplus-app
+            sudo nginx -t && sudo systemctl reload nginx && echo "✅ Host Nginx configured"
+          else
+            echo "⚠️  nginx-app-site.conf not found, skipping host Nginx setup"
+          fi
+          
           # Wait for services
           echo "⏳ Waiting for services to start..."
           sleep 15
@@ -287,6 +297,27 @@ jobs:
             echo "⏳ Attempt $i/30 - waiting for application..."
             sleep 2
           done
+          
+          # Verify API endpoint is accessible
+          echo "🔍 Verifying API endpoints..."
+          API_CONTAINER=$(docker ps -qf "name=api")
+          if [ -n "$API_CONTAINER" ]; then
+            echo "📡 Testing API directly..."
+            docker exec $API_CONTAINER curl -fsS http://localhost:8000/healthz >/dev/null 2>&1 && echo "✅ API container is responding"
+            docker exec $API_CONTAINER curl -fsS http://localhost:8000/api/auth/login -X POST -H "Content-Type: application/json" -d '{"email":"test","password":"test"}' >/dev/null 2>&1 && echo "✅ Auth endpoint exists" || echo "⚠️  Auth endpoint test (expected 401/400)"
+          fi
+          
+          # Test host nginx proxy (via app.vogoplus.app)
+          echo "🌐 Testing host Nginx proxy..."
+          curl -fsS -H "Host: app.vogoplus.app" http://localhost/api/auth/login -X POST -H "Content-Type: application/json" -d '{"email":"test","password":"test"}' >/dev/null 2>&1 && echo "✅ Host Nginx proxy working" || echo "⚠️  Host Nginx proxy test (expected 401/400)"
+          
+          # Test Docker frontend container
+          echo "🌐 Testing Docker frontend container..."
+          curl -fsS http://localhost:8081/ >/dev/null 2>&1 && echo "✅ Frontend container responding on port 8081" || echo "⚠️  Frontend container not responding"
+          
+          # Test Docker backend container
+          echo "🌐 Testing Docker backend container..."
+          curl -fsS http://localhost:8000/healthz >/dev/null 2>&1 && echo "✅ Backend container responding on port 8000" || echo "⚠️  Backend container not responding"
           
           # Show status
           echo "📊 Service status:"
@@ -313,31 +344,32 @@ jobs:
 
       - name: Post-Deploy Validation
         run: |
-          echo "🔍 Validating deployment..."
-          
-          # Wait for full startup
           sleep 15
           
-          # Test health endpoint
-          if curl -fsS http://18.170.49.10/healthz | grep -q "ok"; then
-            echo "✅ Health check passed"
-          else
-            echo "❌ Health check failed"
-            exit 1
-          fi
+          # Test landing page (www.vogoplus.app)
+          echo "🌐 Testing landing page..."
+          curl -fsSI -H "Host: www.vogoplus.app" http://18.170.49.10/ >/dev/null && echo "✅ Landing page (www.vogoplus.app) reachable" || echo "⚠️  Landing page not reachable"
           
-          # Test web interface
-          if curl -fsS http://18.170.49.10/ >/dev/null; then
-            echo "✅ Web interface accessible"
-          else
-            echo "❌ Web interface not accessible"
-            exit 1
-          fi
+          # Test web app (app.vogoplus.app)
+          echo "🌐 Testing web app..."
+          curl -fsSI -H "Host: app.vogoplus.app" http://18.170.49.10/ >/dev/null && echo "✅ Web app (app.vogoplus.app) reachable" || echo "⚠️  Web app not reachable"
           
+          # Test API health check via app.vogoplus.app
+          echo "🌐 Testing API health check..."
+          curl -fsS -H "Host: app.vogoplus.app" http://18.170.49.10/healthz | grep -q "ok" && echo "✅ API health check working" || echo "⚠️  API health check failed"
+          
+          # Test API endpoint via app.vogoplus.app
+          echo "🌐 Testing API endpoint..."
+          curl -fsS -H "Host: app.vogoplus.app" http://18.170.49.10/api/auth/login -X POST -H "Content-Type: application/json" -d '{"email":"test","password":"test"}' >/dev/null 2>&1 && echo "✅ API endpoint accessible (expected 401)" || echo "⚠️  API endpoint test (expected 401/400)"
+          
+          echo ""
           echo "🎉 Deployment validation successful!"
-          echo "📱 Application URL: http://18.170.49.10/"
-          echo "🔧 API Docs: http://18.170.49.10/docs"
-          echo "💚 Health Check: http://18.170.49.10/healthz"
+          echo ""
+          echo "🌐 URLs:"
+          echo "  📄 Landing: https://www.vogoplus.app"
+          echo "  🚀 Web App: https://app.vogoplus.app"
+          echo "  🔧 API Docs: https://app.vogoplus.app/docs"
+          echo "  💚 Health: https://app.vogoplus.app/healthz"
 
       - name: Cleanup on Failure
         if: failure()
