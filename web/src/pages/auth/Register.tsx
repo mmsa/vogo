@@ -98,7 +98,7 @@ export default function Register() {
           <CardHeader>
             <CardTitle>Create your account</CardTitle>
             <CardDescription>
-              Get started with VogPlus.app to unlock your benefits
+              Get started with vogoplus.app to unlock your benefits
             </CardDescription>
           </CardHeader>
           <CardContent>

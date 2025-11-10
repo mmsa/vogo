@@ -167,6 +167,10 @@ export default function Admin() {
   const [affiliateReport, setAffiliateReport] = useState<any[]>([]);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
 
+  // UK Memberships seeding state
+  const [seedingMemberships, setSeedingMemberships] = useState(false);
+  const [seedResult, setSeedResult] = useState<any>(null);
+
   // Cron job state
   const [cronRunning, setCronRunning] = useState(false);
   const [cronResult, setCronResult] = useState<any>(null);
@@ -748,6 +752,121 @@ export default function Admin() {
                                   </p>
                                 ))}
                               </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* UK Memberships Catalog Seeding */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-primary" />
+                <CardTitle>UK Memberships Catalog</CardTitle>
+              </div>
+              <CardDescription>
+                Seed common UK memberships (30-50) and their benefits into the database catalog. Existing memberships will be skipped.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-4">
+                <Button
+                  onClick={async () => {
+                    if (
+                      !confirm(
+                        "Are you sure you want to seed UK memberships and their benefits? This will add 30-50 common UK memberships to the catalog. Existing memberships will be skipped."
+                      )
+                    ) {
+                      return;
+                    }
+                    setSeedingMemberships(true);
+                    setSeedResult(null);
+                    try {
+                      const result = await api.post("/api/admin/seed-uk-memberships");
+                      setSeedResult(result);
+                      // Reload stats after successful seeding
+                      if (result.memberships) {
+                        loadStats();
+                      }
+                    } catch (error: any) {
+                      setSeedResult({
+                        status: "error",
+                        error: error.message || "Failed to seed memberships",
+                      });
+                    } finally {
+                      setSeedingMemberships(false);
+                    }
+                  }}
+                  disabled={seedingMemberships}
+                >
+                  {seedingMemberships ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      Seeding...
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="w-4 h-4 mr-2" />
+                      Seed UK Memberships
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {seedResult && (
+                <div
+                  className={`p-4 rounded-lg border ${
+                    seedResult.status === "error"
+                      ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
+                      : "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+                  }`}
+                >
+                  <div className="flex items-start gap-2">
+                    {seedResult.status === "error" ? (
+                      <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5" />
+                    ) : (
+                      <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5" />
+                    )}
+                    <div className="flex-1">
+                      <p className="font-medium text-zinc-900 dark:text-white mb-2">
+                        {seedResult.status === "error" ? "Error" : "Seeding Complete"}
+                      </p>
+                      {seedResult.status === "error" ? (
+                        <p className="text-sm text-red-600 dark:text-red-400">
+                          {seedResult.error || "Unknown error occurred"}
+                        </p>
+                      ) : (
+                        <div className="space-y-1 text-sm text-zinc-700 dark:text-zinc-300">
+                          <p className="font-medium">{seedResult.message}</p>
+                          {seedResult.memberships && (
+                            <div className="mt-2 space-y-1">
+                              <p>
+                                <span className="font-medium">Memberships:</span>{" "}
+                                <span className="text-green-600 dark:text-green-400">
+                                  {seedResult.memberships.added} added
+                                </span>
+                                {seedResult.memberships.skipped > 0 && (
+                                  <span className="text-zinc-500 dark:text-zinc-400">
+                                    {" "}
+                                    • {seedResult.memberships.skipped} skipped (already exist)
+                                  </span>
+                                )}
+                                {" "}• {seedResult.memberships.total} total
+                              </p>
+                              {seedResult.benefits && (
+                                <p>
+                                  <span className="font-medium">Benefits:</span>{" "}
+                                  <span className="text-green-600 dark:text-green-400">
+                                    {seedResult.benefits.added} added
+                                  </span>
+                                </p>
+                              )}
                             </div>
                           )}
                         </div>

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { MessageCircle, X, Send, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
@@ -17,12 +18,27 @@ interface BenefitReference {
   membership_name: string;
 }
 
+interface RecommendedMembership {
+  membership_id: number;
+  membership_name: string;
+  provider_name?: string;
+  plan_name?: string;
+  provider_slug?: string;
+  affiliate_url?: string;
+  matching_benefits?: Array<{
+    title: string;
+    description?: string;
+    similarity_score?: number;
+  }>;
+}
+
 export function ChatAssistant() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [relatedBenefits, setRelatedBenefits] = useState<BenefitReference[]>([]);
+  const [recommendedMemberships, setRecommendedMemberships] = useState<RecommendedMembership[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -84,6 +100,7 @@ export function ChatAssistant() {
 
       setMessages((prev) => [...prev, assistantMessage]);
       setRelatedBenefits(data.related_benefits || []);
+      setRecommendedMemberships(data.recommended_memberships || []);
     } catch (error: any) {
       const errorMessage: Message = {
         role: "assistant",
@@ -126,7 +143,7 @@ export function ChatAssistant() {
                 <Sparkles className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-semibold">VogPlus.app Assistant</h3>
+                <h3 className="font-semibold">vogoplus.app Assistant</h3>
                 <p className="text-xs opacity-90">Ask about your benefits</p>
               </div>
             </div>
@@ -188,9 +205,11 @@ export function ChatAssistant() {
                   Related Benefits:
                 </p>
                 {relatedBenefits.map((benefit) => (
-                  <div
+                  <Link
                     key={benefit.id}
-                    className="bg-white dark:bg-zinc-800 rounded-lg p-2 text-xs"
+                    to={`/benefits#benefit-${benefit.id}`}
+                    onClick={() => setIsOpen(false)}
+                    className="block bg-white dark:bg-zinc-800 rounded-lg p-2 text-xs hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors cursor-pointer"
                   >
                     <p className="font-medium text-zinc-900 dark:text-white">
                       {benefit.title}
@@ -198,6 +217,53 @@ export function ChatAssistant() {
                     <p className="text-zinc-500 dark:text-zinc-400">
                       {benefit.membership_name}
                     </p>
+                  </Link>
+                ))}
+              </div>
+            )}
+
+            {/* Recommended Memberships */}
+            {recommendedMemberships.length > 0 && (
+              <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded-xl p-3 space-y-2">
+                <p className="text-xs font-medium text-green-700 dark:text-green-400">
+                  💡 Recommended Memberships:
+                </p>
+                {recommendedMemberships.map((membership) => (
+                  <div
+                    key={membership.membership_id}
+                    className="bg-white dark:bg-zinc-800 rounded-lg p-2 text-xs"
+                  >
+                    <p className="font-medium text-zinc-900 dark:text-white mb-1">
+                      {membership.membership_name}
+                      {membership.plan_name && (
+                        <span className="text-zinc-500 dark:text-zinc-400 ml-1">
+                          ({membership.plan_name})
+                        </span>
+                      )}
+                    </p>
+                    {membership.matching_benefits && membership.matching_benefits.length > 0 && (
+                      <p className="text-zinc-600 dark:text-zinc-400 mb-2">
+                        Includes: {membership.matching_benefits.map((b) => b.title).join(", ")}
+                      </p>
+                    )}
+                    {membership.affiliate_url ? (
+                      <a
+                        href={membership.affiliate_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-block bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs font-medium transition-colors"
+                      >
+                        Learn More →
+                      </a>
+                    ) : (
+                      <Link
+                        to={`/memberships`}
+                        onClick={() => setIsOpen(false)}
+                        className="inline-block bg-primary hover:bg-primary-light text-white px-3 py-1 rounded text-xs font-medium transition-colors"
+                      >
+                        View Details →
+                      </Link>
+                    )}
                   </div>
                 ))}
               </div>

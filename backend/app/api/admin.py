@@ -9,6 +9,8 @@ from app.core.auth import get_current_user, require_role
 from app.models import User, Benefit, Membership, UserMembership, AnalyticsEvent
 from app.schemas import UserRead, AdminUserUpdate, UserListResponse
 from app.services.benefit_discovery_cron import discover_benefits_for_memberships_without_benefits
+from app.services.membership_tiers import get_plan_tier
+from app.data.uk_memberships import UK_MEMBERSHIPS
 import json
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -342,6 +344,90 @@ def seed_benefits(
         "message": f"Loaded seed data: {added_count} new, {updated_count} updated",
         "added": added_count,
         "updated": updated_count,
+    }
+
+
+@router.post("/seed-uk-memberships")
+def seed_uk_memberships(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("admin")),
+):
+    """Seed common UK memberships and their benefits into the catalog (admin only)."""
+    added_memberships = 0
+    added_benefits = 0
+
+    for membership_data in UK_MEMBERSHIPS:
+        # Check if membership already exists
+        existing = (
+            db.query(Membership)
+            .filter(Membership.provider_slug == membership_data["provider_slug"])
+            .first()
+        )
+
+        if existing:
+            # Skip existing memberships - do not add or update
+            continue
+
+        # Create new membership only if it doesn't exist
+        plan_tier = get_plan_tier(
+            membership_data.get("provider_name", ""),
+            membership_data.get("plan_name", "")
+        )
+        membership = Membership(
+            name=membership_data["name"],
+            provider_slug=membership_data["provider_slug"],
+            provider_name=membership_data.get("provider_name"),
+            plan_name=membership_data.get("plan_name"),
+            plan_tier=plan_tier,
+            is_catalog=True,  # Mark as catalog item
+            status="active",  # Set as active
+        )
+        db.add(membership)
+        db.flush()  # Get the ID
+        added_memberships += 1
+
+        # Process benefits if provided
+        benefits = membership_data.get("benefits", [])
+        for benefit_data in benefits:
+            # Check if benefit already exists
+            existing_benefit = (
+                db.query(Benefit)
+                .filter(
+                    Benefit.membership_id == membership.id,
+                    Benefit.title == benefit_data["title"]
+                )
+                .first()
+            )
+
+            if existing_benefit:
+                # Skip existing benefits - do not add or update
+                continue
+
+            # Create new benefit only if it doesn't exist
+            new_benefit = Benefit(
+                membership_id=membership.id,
+                title=benefit_data["title"],
+                description=benefit_data.get("description"),
+                vendor_domain=benefit_data.get("vendor_domain"),
+                category=benefit_data.get("category"),
+                source_url=benefit_data.get("source_url"),
+                validation_status="approved",  # Auto-approve seeded benefits
+            )
+            db.add(new_benefit)
+            added_benefits += 1
+
+    db.commit()
+
+    return {
+        "message": f"Seeded UK memberships: {added_memberships} added (skipped existing). Benefits: {added_benefits} added (skipped existing).",
+        "memberships": {
+            "added": added_memberships,
+            "skipped": len(UK_MEMBERSHIPS) - added_memberships,
+            "total": len(UK_MEMBERSHIPS),
+        },
+        "benefits": {
+            "added": added_benefits,
+        },
     }
 
 
