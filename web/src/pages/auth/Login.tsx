@@ -148,17 +148,6 @@ export default function Login() {
                 Sign up
               </Link>
             </div>
-
-            {/* Demo Credentials */}
-            <div className="mt-6 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-zinc-200 dark:border-zinc-700">
-              <p className="text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                Demo Credentials:
-              </p>
-              <div className="space-y-1 text-xs text-zinc-600 dark:text-zinc-400">
-                <p>📧 <strong>User:</strong> test@vogoplus.app / TestPass123!</p>
-                <p>👑 <strong>Admin:</strong> admin@vogoplus.app / ChangeMe123!</p>
-              </div>
-            </div>
           </CardContent>
         </Card>
       </div>
