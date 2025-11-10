@@ -238,7 +238,7 @@ def generate_chat_response(
                 upgrade_context += f" [Match: {int(benefit['similarity_score']*100)}%]\n"
     
     # Build intelligent system prompt
-    system_prompt = f"""You are VogPlus.ai's intelligent benefits assistant. Your goal is to help users save money and maximize their membership benefits.
+    system_prompt = f"""You are VogPlus.app's intelligent benefits assistant. Your goal is to help users save money and maximize their membership benefits.
 
 CRITICAL RULES:
 1. **If user already has relevant benefits**: Tell them they can use their existing benefit! Be specific and encouraging.

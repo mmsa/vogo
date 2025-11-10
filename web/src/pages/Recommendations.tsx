@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Sparkles, Lightbulb, Plus, Loader2 } from "lucide-react";
+import { Sparkles, Lightbulb, Plus, Loader2, RefreshCw } from "lucide-react";
 import { api, Recommendation, Benefit } from "@/lib/api";
 import { useAuth } from "@/store/auth";
 import { RecommendationCard } from "@/components/RecommendationCard";
@@ -14,77 +14,86 @@ export default function Recommendations() {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [relevantBenefits, setRelevantBenefits] = useState<Benefit[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasMemberships, setHasMemberships] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (user?.id) {
       loadRecommendations();
     }
+    // Only reload when user changes, not on every render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
-  const loadRecommendations = async () => {
+  const loadRecommendations = async (skipCache = false) => {
     if (!user?.id) return;
     
     try {
       setLoading(true);
       
-      // Check cache first
-      const cachedAI = localStorage.getItem("vogo_cache_ai");
-      if (cachedAI) {
-        try {
-          const cached = JSON.parse(cachedAI);
-          // Filter cached recommendations (in case cache was from before filtering)
-          const filteredCached = cached.recs.filter(
-            (rec: Recommendation) => rec.kind === "overlap" || rec.kind === "tip"
-          );
-          setRecommendations(filteredCached);
-          setRelevantBenefits(cached.benefits);
-          setLoading(false);
-          
-          // Load fresh data in background (non-blocking)
-          api.getLLMRecommendations({ user_id: user.id })
-            .then(data => {
-              // Filter out "unused" recommendations - only show overlaps
-              const filteredRecs = data.recommendations.filter(
-                (rec: Recommendation) => rec.kind === "overlap" || rec.kind === "tip"
-              );
-              setRecommendations(filteredRecs);
-              setRelevantBenefits(data.relevant_benefits);
-              const aiCache = {
-                recs: filteredRecs,
-                benefits: data.relevant_benefits,
-              };
-              // Update cache
-              localStorage.setItem("vogo_cache_ai", JSON.stringify(aiCache));
-            })
-            .catch(err => console.error("Background refresh failed:", err));
-          return;
-        } catch (e) {
-          // Cache parse failed, continue to load fresh
-          console.error("Cache parse error:", e);
+      // Check if user has memberships first
+      const userBenefits = await api.getUserBenefits(user.id);
+      const uniqueMembershipIds = new Set(userBenefits.map((b: Benefit) => b.membership_id));
+      setHasMemberships(uniqueMembershipIds.size > 0);
+      
+      // Check cache first - if cache exists, use it and don't refresh automatically
+      // Cache is cleared when memberships are added/removed, so we only refresh then
+      // Skip cache if explicitly requested (e.g., from refresh button)
+      if (!skipCache) {
+        const cachedAI = localStorage.getItem("vogo_cache_ai");
+        if (cachedAI) {
+          try {
+            const cached = JSON.parse(cachedAI);
+            // Filter cached recommendations (in case cache was from before filtering)
+            const filteredCached = cached.recs.filter(
+              (rec: Recommendation) => rec.kind === "overlap" || rec.kind === "tip" || rec.kind === "add_membership" || rec.kind === "upgrade"
+            );
+            setRecommendations(filteredCached);
+            setRelevantBenefits(cached.benefits);
+            setLoading(false);
+            // Don't refresh in background - only refresh when cache is cleared (memberships changed)
+            return;
+          } catch (e) {
+            // Cache parse failed, continue to load fresh
+            console.error("Cache parse error:", e);
+          }
         }
       }
       
-      // Use LLM-powered recommendations
-      const data = await api.getLLMRecommendations({
-        user_id: user.id,
-      });
-      // Filter out "unused" recommendations - only show overlaps
-      const filteredRecs = data.recommendations.filter(
-        (rec: Recommendation) => rec.kind === "overlap" || rec.kind === "tip"
-      );
-      setRecommendations(filteredRecs);
-      setRelevantBenefits(data.relevant_benefits);
-      const aiCache = {
-        recs: filteredRecs,
-        benefits: data.relevant_benefits,
-      };
-      // Persist to localStorage
-      localStorage.setItem("vogo_cache_ai", JSON.stringify(aiCache));
+      // Use LLM-powered recommendations (only if user has memberships)
+      if (uniqueMembershipIds.size > 0) {
+        const data = await api.getLLMRecommendations({
+          user_id: user.id,
+        });
+        // Filter out "unused" recommendations - show overlaps, tips, and optimization recommendations
+        const filteredRecs = (data.recommendations || []).filter(
+          (rec: Recommendation) => rec.kind === "overlap" || rec.kind === "tip" || rec.kind === "add_membership" || rec.kind === "upgrade"
+        );
+        setRecommendations(filteredRecs);
+        setRelevantBenefits(data.relevant_benefits || []);
+        const aiCache = {
+          recs: filteredRecs,
+          benefits: data.relevant_benefits || [],
+        };
+        // Persist to localStorage
+        localStorage.setItem("vogo_cache_ai", JSON.stringify(aiCache));
+      } else {
+        setRecommendations([]);
+        setRelevantBenefits([]);
+      }
     } catch (error) {
       console.error("Failed to load recommendations:", error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    // Clear cache and reload
+    localStorage.removeItem("vogo_cache_ai");
+    await loadRecommendations(true);
   };
 
   return (
@@ -100,13 +109,25 @@ export default function Recommendations() {
           </p>
         </div>
 
-        {/* AI Badge */}
-        <Card className="p-4 flex items-center gap-2 shrink-0">
-          <Badge variant="default" className="gap-1">
-            <Sparkles className="w-3 h-3" />
-            AI Analysis
-          </Badge>
-        </Card>
+        {/* AI Badge and Refresh Button */}
+        <div className="flex items-center gap-3 shrink-0">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={loading || refreshing || !hasMemberships}
+            className="gap-2"
+          >
+            <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+            {refreshing ? "Refreshing..." : "Refresh"}
+          </Button>
+          <Card className="p-4 flex items-center gap-2">
+            <Badge variant="default" className="gap-1">
+              <Sparkles className="w-3 h-3" />
+              AI Analysis
+            </Badge>
+          </Card>
+        </div>
       </div>
 
       {/* Loading State */}
@@ -136,15 +157,23 @@ export default function Recommendations() {
               <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
                 No recommendations yet
               </h3>
-              <p className="text-zinc-600 dark:text-zinc-400 mb-6">
-                Add memberships to receive personalized recommendations
-              </p>
-              <Link to="/memberships">
-                <Button className="gap-2">
-                  <Plus className="w-5 h-5" />
-                  Add Memberships
-                </Button>
-              </Link>
+              {hasMemberships ? (
+                <p className="text-zinc-600 dark:text-zinc-400">
+                  We're analyzing your memberships to find optimization opportunities. Check back soon!
+                </p>
+              ) : (
+                <>
+                  <p className="text-zinc-600 dark:text-zinc-400 mb-6">
+                    Add memberships to receive personalized recommendations
+                  </p>
+                  <Link to="/memberships">
+                    <Button className="gap-2">
+                      <Plus className="w-5 h-5" />
+                      Add Memberships
+                    </Button>
+                  </Link>
+                </>
+              )}
             </Card>
           ) : (
             <>

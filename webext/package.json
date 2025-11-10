@@ -1,11 +1,11 @@
 {
-  "name": "vogplus-ai-webext",
+  "name": "vogoplus-app-webext",
   "private": true,
   "version": "0.1.0",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "zip": "cd dist && zip -r ../vogplus-ai_ext.zip ."
+    "zip": "cd dist && zip -r ../vogoplus-app_ext.zip ."
   },
   "devDependencies": {
     "vite": "^5",

@@ -5,7 +5,7 @@ import requests
 import json
 
 API_BASE = "http://localhost:8000"
-EMAIL = "admin@vogo.app"
+EMAIL = "admin@vogoplus.app"
 PASSWORD = "ChangeMe123!"
 
 

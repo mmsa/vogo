@@ -1,23 +1,23 @@
 #!/bin/bash
 
 ###############################################################################
-# VogPlus.ai Landing Page Deployment Script
+# VogPlus.app Landing Page Deployment Script
 # 
 # This script deploys the landing page to:
-# - www.vogplus.ai (primary)
-# - vogplus.ai (redirects to www)
+# - www.vogoplus.app (primary)
+# - vogoplus.app (redirects to www)
 ###############################################################################
 
 set -e  # Exit on error
 
-echo "🚀 VogPlus.ai Landing Page Deployment"
+echo "🚀 VogPlus.app Landing Page Deployment"
 echo "======================================"
 
 # Configuration
-LANDING_DIR="/var/www/vogplus-landing"
+LANDING_DIR="/var/www/vogoplus-landing"
 SOURCE_DIR="./landing"
-NGINX_CONFIG="/etc/nginx/sites-available/vogplus-landing"
-NGINX_ENABLED="/etc/nginx/sites-enabled/vogplus-landing"
+NGINX_CONFIG="/etc/nginx/sites-available/vogoplus-landing"
+NGINX_ENABLED="/etc/nginx/sites-enabled/vogoplus-landing"
 
 # Check if running as root
 if [ "$EUID" -ne 0 ]; then 
@@ -43,18 +43,18 @@ echo "✅ Files copied and permissions set"
 echo ""
 echo "⚙️  Step 3: Creating Nginx configuration..."
 cat > $NGINX_CONFIG << 'EOF'
-# Landing page - www.vogplus.ai and vogplus.ai
+# Landing page - www.vogoplus.app and vogoplus.app
 server {
     listen 80;
     listen [::]:80;
-    server_name vogplus.ai www.vogplus.ai;
+    server_name vogoplus.app www.vogoplus.app;
 
-    root /var/www/vogplus-landing;
+    root /var/www/vogoplus-landing;
     index index.html;
 
     # Redirect non-www to www
-    if ($host = vogplus.ai) {
-        return 301 $scheme://www.vogplus.ai$request_uri;
+    if ($host = vogoplus.app) {
+        return 301 $scheme://www.vogoplus.app$request_uri;
     }
 
     location / {
@@ -120,8 +120,8 @@ echo ""
 echo "✅ Landing page deployment complete!"
 echo ""
 echo "🌐 Your landing page is now available at:"
-echo "   - http://www.vogplus.ai (primary)"
-echo "   - http://vogplus.ai (redirects to www)"
+echo "   - http://www.vogoplus.app (primary)"
+echo "   - http://vogoplus.app (redirects to www)"
 echo ""
 echo "⚠️  NEXT STEPS:"
 echo "   1. Configure DNS in GoDaddy (see GODADDY_SETUP.md)"

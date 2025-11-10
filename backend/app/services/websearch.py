@@ -122,7 +122,7 @@ def fetch_text(url: str, timeout: int = 12) -> Dict[str, str]:
         Dictionary with url, title, and text
     """
     try:
-        headers = {"User-Agent": "VogPlus.ai Bot/1.0 (Membership benefits aggregator)"}
+        headers = {"User-Agent": "VogPlus.app Bot/1.0 (Membership benefits aggregator)"}
 
         with httpx.Client(
             follow_redirects=True, timeout=timeout, headers=headers

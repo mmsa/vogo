@@ -434,7 +434,7 @@ export default function Admin() {
                   <code className="bg-zinc-200 dark:bg-zinc-700 px-1 rounded">
                     fetch('/api/dev/make-me-admin', {"{"} method: 'POST',
                     headers: {"{"} 'Authorization': 'Bearer ' +
-                    JSON.parse(localStorage.getItem('vogplus-auth')).state.accessToken{" "}
+                    JSON.parse(localStorage.getItem('vogoplus-auth') || localStorage.getItem('vogplus-auth') || '{}').state?.accessToken{" "}
                     {"}"} {"}"}).then(r =&gt; r.json()).then(console.log)
                   </code>
                 </li>

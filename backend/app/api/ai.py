@@ -117,11 +117,20 @@ def discover_membership(
         if existing:
             membership = existing
         else:
+            from app.services.membership_tiers import get_plan_tier
+            # Parse provider and plan from name
+            parts = name.split()
+            provider_name = parts[0] if parts else name
+            plan_name = " ".join(parts[1:]) if len(parts) > 1 else "Standard"
+            
             membership = Membership(
                 name=name,
                 provider_slug=provider_slug,
                 is_catalog=False,
                 status="pending",
+                provider_name=provider_name,
+                plan_name=plan_name,
+                plan_tier=get_plan_tier(provider_name, plan_name),
             )
             db.add(membership)
             db.commit()

@@ -1,11 +1,11 @@
-"""Vogo FastAPI application entry point."""
+"""VogPlus.app FastAPI application entry point."""
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.router import api_router
 
 app = FastAPI(
-    title="Vogo API",
+    title="VogPlus.app API",
     description="Membership Benefits Tracker",
     version="0.1.0"
 )
@@ -29,7 +29,7 @@ def health_check():
     """Health check endpoint."""
     return {
         "status": "ok",
-        "service": "vogo-api",
+        "service": "vogoplus-app-api",
         "version": "0.1.0"
     }
 

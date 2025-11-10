@@ -12,7 +12,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
-    const stored = localStorage.getItem("vogo-theme");
+    const stored = localStorage.getItem("vogoplus-app-theme");
     return (stored as Theme) || "system";
   });
 
@@ -34,7 +34,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     root.classList.add(resolvedTheme);
     setActualTheme(resolvedTheme);
-    localStorage.setItem("vogo-theme", theme);
+    localStorage.setItem("vogoplus-app-theme", theme);
   }, [theme]);
 
   // Listen for system theme changes

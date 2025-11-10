@@ -33,13 +33,14 @@ export default function Dashboard() {
       const benefitsData = await api.getUserBenefits(user.id);
       setBenefits(benefitsData);
       
-      // Check cache first for faster loading (AI mode only)
+      // Check cache first - if cache exists, use it and don't refresh automatically
+      // Cache is cleared when memberships are added/removed, so we only refresh then
       const cachedAI = localStorage.getItem("vogo_cache_ai");
       if (cachedAI) {
         try {
           const cached = JSON.parse(cachedAI);
           const filteredCached = cached.recs.filter(
-            (rec: Recommendation) => rec.kind === "overlap" || rec.kind === "tip"
+            (rec: Recommendation) => rec.kind === "overlap" || rec.kind === "tip" || rec.kind === "add_membership" || rec.kind === "upgrade"
           );
           // Deduplicate by title to avoid duplicates
           const uniqueCached = filteredCached.filter((rec: Recommendation, index: number, self: Recommendation[]) => 
@@ -47,25 +48,7 @@ export default function Dashboard() {
           );
           setRecommendations(uniqueCached);
           setLoading(false);
-          
-          // Load fresh data in background (non-blocking)
-          api.getLLMRecommendations({ user_id: user.id })
-            .then(data => {
-              const filteredRecs = data.recommendations.filter(
-                (rec: Recommendation) => rec.kind === "overlap" || rec.kind === "tip"
-              );
-              // Deduplicate by title to avoid duplicates
-              const uniqueRecs = filteredRecs.filter((rec: Recommendation, index: number, self: Recommendation[]) => 
-                index === self.findIndex((r) => r.title === rec.title && r.kind === rec.kind)
-              );
-              setRecommendations(uniqueRecs);
-              // Update cache
-              localStorage.setItem("vogo_cache_ai", JSON.stringify({
-                recs: uniqueRecs,
-                benefits: data.relevant_benefits,
-              }));
-            })
-            .catch(err => console.error("Background refresh failed:", err));
+          // Don't refresh in background - only refresh when cache is cleared (memberships changed)
           return;
         } catch (e) {
           // Cache parse failed, continue to load fresh

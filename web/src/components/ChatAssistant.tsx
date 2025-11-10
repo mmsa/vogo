@@ -126,7 +126,7 @@ export function ChatAssistant() {
                 <Sparkles className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-semibold">VogPlus.ai Assistant</h3>
+                <h3 className="font-semibold">VogPlus.app Assistant</h3>
                 <p className="text-xs opacity-90">Ask about your benefits</p>
               </div>
             </div>

@@ -64,6 +64,18 @@ export function RecommendationCard({
           color: "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-500",
           icon: Star,
         };
+      case "add_membership":
+        return {
+          color:
+            "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-500",
+          icon: ArrowUpRight,
+        };
+      case "upgrade":
+        return {
+          color:
+            "bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-500",
+          icon: ArrowUpRight,
+        };
       case "unused":
         return {
           color:
@@ -139,6 +151,8 @@ export function RecommendationCard({
             className="text-xs capitalize"
           >
             {recommendation.kind === "overlap" && "⚠️ Duplicate"}
+            {recommendation.kind === "add_membership" && "➕ Add Membership"}
+            {recommendation.kind === "upgrade" && "⬆️ Upgrade"}
             {recommendation.kind === "unused" && "💎 Unused Perk"}
             {recommendation.kind === "switch" && "🔄 Better Option"}
             {recommendation.kind === "bundle" && "📦 Bundle"}

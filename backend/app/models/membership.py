@@ -11,6 +11,7 @@ class Membership(Base):
     provider_slug = Column(String, unique=True, index=True, nullable=False)
     provider_name = Column(String, nullable=True)  # Provider: "Revolut"
     plan_name = Column(String, nullable=True)  # Plan: "Premium"
+    plan_tier = Column(Integer, nullable=True)  # Tier level: 1=lowest, higher=better (e.g., Standard=1, Premium=2, Metal=3)
     
     # Smart Add fields
     is_catalog = Column(Boolean, default=True, nullable=False)  # True = curated, False = discovered

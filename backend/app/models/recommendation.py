@@ -10,6 +10,8 @@ class RecommendationKind(str, enum.Enum):
     switch = "switch"
     bundle = "bundle"
     tip = "tip"
+    add_membership = "add_membership"
+    upgrade = "upgrade"
 
 
 class Recommendation(Base):

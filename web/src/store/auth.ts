@@ -144,7 +144,7 @@ export const useAuth = create<AuthState>()(
       },
     }),
     {
-      name: 'vogplus-auth',
+      name: 'vogoplus-auth',
       partialize: (state) => ({
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,

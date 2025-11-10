@@ -1,5 +1,5 @@
 /**
- * API client for VogPlus.ai backend
+ * API client for VogPlus.app backend
  */
 
 // Use empty string to use Vite proxy in development
@@ -53,7 +53,7 @@ export interface Recommendation {
   membership_slug?: string;
   benefit_id?: number;
   benefit_match_ids?: number[];
-  kind?: "overlap" | "unused" | "switch" | "bundle" | "tip";
+  kind?: "overlap" | "unused" | "switch" | "bundle" | "tip" | "add_membership" | "upgrade";
 }
 
 export interface CheckResponse {
@@ -163,7 +163,13 @@ class ApiClient {
     const url = `${this.baseUrl}${endpoint}`;
 
     // Get auth token from localStorage (Zustand persist)
-    const authData = localStorage.getItem("vogplus-auth");
+    // Migrate from old key if needed
+    const oldAuthData = localStorage.getItem("vogplus-auth");
+    if (oldAuthData) {
+      localStorage.setItem("vogoplus-auth", oldAuthData);
+      localStorage.removeItem("vogplus-auth");
+    }
+    const authData = localStorage.getItem("vogoplus-auth");
     const accessToken = authData
       ? JSON.parse(authData).state?.accessToken
       : null;
@@ -200,7 +206,7 @@ class ApiClient {
 
   private async refreshToken(): Promise<boolean> {
     try {
-      const authData = localStorage.getItem("vogplus-auth");
+      const authData = localStorage.getItem("vogoplus-auth");
       const refreshToken = authData
         ? JSON.parse(authData).state?.refreshToken
         : null;
@@ -219,13 +225,19 @@ class ApiClient {
         const data = await response.json();
 
         // Update tokens in localStorage
-        const auth = JSON.parse(localStorage.getItem("vogplus-auth") || "{}");
+        // Migrate from old key if needed
+        const oldAuth = localStorage.getItem("vogplus-auth");
+        if (oldAuth) {
+          localStorage.setItem("vogoplus-auth", oldAuth);
+          localStorage.removeItem("vogplus-auth");
+        }
+        const auth = JSON.parse(localStorage.getItem("vogoplus-auth") || "{}");
         auth.state = {
           ...auth.state,
           accessToken: data.access_token,
           refreshToken: data.refresh_token,
         };
-        localStorage.setItem("vogplus-auth", JSON.stringify(auth));
+        localStorage.setItem("vogoplus-auth", JSON.stringify(auth));
 
         return true;
       }

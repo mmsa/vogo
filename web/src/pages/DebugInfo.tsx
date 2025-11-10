@@ -55,7 +55,7 @@ export default function DebugInfo() {
             <h3 className="font-semibold mb-2">LocalStorage:</h3>
             <div className="bg-zinc-100 dark:bg-zinc-800 rounded p-4 font-mono text-xs">
               <pre className="whitespace-pre-wrap break-all">
-                {JSON.stringify(JSON.parse(localStorage.getItem('vogplus-auth') || '{}'), null, 2)}
+                {JSON.stringify(JSON.parse(localStorage.getItem('vogoplus-auth') || localStorage.getItem('vogplus-auth') || '{}'), null, 2)}
               </pre>
             </div>
           </div>
@@ -113,7 +113,8 @@ export default function DebugInfo() {
               <button
                 onClick={() => {
                   if (confirm('This will log you out. Continue?')) {
-                    localStorage.removeItem('vogplus-auth');
+                    localStorage.removeItem('vogoplus-auth');
+                    localStorage.removeItem('vogplus-auth'); // Remove old key too
                     window.location.href = '/login';
                   }
                 }}

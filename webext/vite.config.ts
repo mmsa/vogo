@@ -30,6 +30,7 @@ export default defineConfig({
     emptyOutDir: true
   },
   // Ensure HTML files are in the right place
-  publicDir: false
+  publicDir: "public",
+  copyPublicDir: true
 });
 

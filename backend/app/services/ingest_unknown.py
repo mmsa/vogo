@@ -124,14 +124,19 @@ def ingest_unknown_membership(db: Session, user_id: int, name: str) -> Dict[str,
 
     # Step 5: Insert membership - make it catalog-ready immediately
     # Only create membership if we found benefits
+    provider_name = name.split()[0] if name.split() else name
+    plan_name = " ".join(name.split()[1:]) if len(name.split()) > 1 else "Standard"
+    from app.services.membership_tiers import get_plan_tier
+    
     membership = Membership(
         name=name,
         provider_slug=slug,
         is_catalog=True,  # Make it available in catalog immediately
         status="active",  # Set as active so user can add it
         discovered_by_user_id=user_id,
-        provider_name=name.split()[0] if name.split() else name,
-        plan_name=" ".join(name.split()[1:]) if len(name.split()) > 1 else "Standard",
+        provider_name=provider_name,
+        plan_name=plan_name,
+        plan_tier=get_plan_tier(provider_name, plan_name),
     )
     db.add(membership)
     db.flush()  # Get ID

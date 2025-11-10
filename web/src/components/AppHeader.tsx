@@ -16,6 +16,7 @@ import { ModeToggle } from "./ui/ModeToggle";
 import { Badge } from "./ui/Badge";
 import { useAuth } from "@/store/auth";
 import { cn } from "@/lib/utils";
+import { Logo } from "./Logo";
 
 const baseNavItems = [
   { path: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -46,11 +47,9 @@ export function AppHeader() {
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <div className="flex items-center gap-8">
-            <Link to="/" className="flex items-center gap-2">
-              <div className="bg-gradient-to-r from-primary to-primary-light rounded-xl px-3 py-1.5">
-                <span className="text-white font-bold text-xl">VogPlus</span>
-              </div>
-              <span className="hidden sm:inline text-xs text-zinc-400 dark:text-zinc-500 font-medium">.ai</span>
+            <Link to="/" className="flex items-center">
+              <Logo size="md" showText={false} />
+              <span className="hidden sm:inline ml-2 text-sm text-zinc-600 dark:text-zinc-400 font-medium">vogoplus.app</span>
             </Link>
 
             {/* Nav Items */}

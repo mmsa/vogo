@@ -41,10 +41,10 @@ async def test_semantic_matching():
 
     db = SessionLocal()
 
-    # Get test user (test@vogo.app)
-    user = db.query(User).filter(User.email == "test@vogo.app").first()
+    # Get test user (test@vogoplus.app)
+    user = db.query(User).filter(User.email == "test@vogoplus.app").first()
     if not user:
-        print("❌ test@vogo.app user not found!")
+        print("❌ test@vogoplus.app user not found!")
         return
 
     print(f"\n✅ Testing with user: {user.email} (ID: {user.id})")

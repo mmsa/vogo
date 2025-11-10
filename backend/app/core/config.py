@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     refresh_ttl_days: str = "30"
 
     # Admin user (for seeding)
-    admin_email: str = "admin@vogo.app"
+    admin_email: str = "admin@vogoplus.app"
     admin_password: str = "ChangeMe123!"
 
     model_config = SettingsConfigDict(
