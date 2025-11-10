@@ -61,7 +61,7 @@ async function handlePageContext(msg: any, tabId?: number) {
   }
 
   // Fetch fresh recommendations
-  const apiBase = (await gs<string>("apiBase")) || "http://localhost:8000";
+  const apiBase = (await gs<string>("apiBase")) || "https://app.vogoplus.app";
   const token = await gs<string>("accessToken");
 
   console.log("  📡 Fetching fresh data from", apiBase);

@@ -7,7 +7,7 @@ export const AUTO_OPEN = "autoOpen";
 export const getToken = () => gs<string>(TOKEN_KEY);
 export const setToken = (t: string) => ss(TOKEN_KEY, t);
 export const clearToken = () => rm(TOKEN_KEY);
-export const getApiBase = async () => (await gs<string>(API_KEY)) || "http://localhost:8000";
+export const getApiBase = async () => (await gs<string>(API_KEY)) || "https://app.vogoplus.app";
 export const setApiBase = (u: string) => ss(API_KEY, u);
 
 export async function login(email: string, password: string) {
