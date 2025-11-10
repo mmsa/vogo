@@ -13,6 +13,7 @@ from app.core.config import settings
 from app.core.security import hash_password
 from app.models import Membership, Benefit, Vendor, User
 from app.models.user import UserRole
+from app.services.membership_tiers import get_plan_tier
 
 
 def create_tables():
@@ -51,16 +52,22 @@ def upsert_membership(
         db.query(Membership).filter(Membership.provider_slug == provider_slug).first()
     )
 
+    plan_tier = get_plan_tier(provider_name or "", plan_name or "")
+    
     if membership:
         membership.name = name
         membership.provider_name = provider_name
         membership.plan_name = plan_name
+        # Update tier if not set or if provider/plan changed
+        if membership.plan_tier is None:
+            membership.plan_tier = plan_tier
     else:
         membership = Membership(
             name=name,
             provider_slug=provider_slug,
             provider_name=provider_name,
             plan_name=plan_name,
+            plan_tier=plan_tier,
         )
         db.add(membership)
         db.flush()
@@ -103,7 +110,7 @@ def upsert_benefit(db: Session, membership_id: int, benefit_data: dict):
 def create_initial_users(db: Session):
     """Create admin and test users."""
     # Create admin user
-    admin_email = settings.admin_email or "admin@vogo.app"
+    admin_email = settings.admin_email or "admin@vogoplus.app"
     admin_password = settings.admin_password or "ChangeMe123!"
 
     admin = db.query(User).filter(User.email == admin_email).first()
@@ -121,7 +128,7 @@ def create_initial_users(db: Session):
         print(f"✓ Admin user already exists: {admin.email}")
 
     # Create test user
-    test_email = "test@vogo.app"
+    test_email = "test@vogoplus.app"
     test_password = "TestPass123!"
 
     user = db.query(User).filter(User.email == test_email).first()
@@ -187,6 +194,12 @@ def seed_database():
                 provider_name,
                 plan_name,
             )
+            
+            # Calculate and set plan_tier if not set
+            if membership.plan_tier is None:
+                membership.plan_tier = get_plan_tier(provider_name or "", plan_name or "")
+                db.flush()
+            
             membership_count += 1
 
             # Process benefits

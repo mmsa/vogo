@@ -32,7 +32,7 @@
         const loginRes = await fetch('http://localhost:8000/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: 'admin@vogo.app', password: 'ChangeMe123!' })
+          body: JSON.stringify({ email: 'admin@vogoplus.app', password: 'ChangeMe123!' })
         });
         
         if (!loginRes.ok) {

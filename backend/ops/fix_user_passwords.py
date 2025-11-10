@@ -19,45 +19,45 @@ def fix_passwords():
 
     try:
         # Update admin user
-        admin = db.query(User).filter(User.email == "admin@vogo.app").first()
+        admin = db.query(User).filter(User.email == "admin@vogoplus.app").first()
         if admin:
             admin.password_hash = hash_password("ChangeMe123!")
             admin.role = UserRole.ADMIN
             admin.is_active = True
-            print("✅ Updated admin@vogo.app password")
+            print("✅ Updated admin@vogoplus.app password")
         else:
             # Create admin if doesn't exist
             admin = User(
-                email="admin@vogo.app",
+                email="admin@vogoplus.app",
                 password_hash=hash_password("ChangeMe123!"),
                 role=UserRole.ADMIN,
                 is_active=True,
             )
             db.add(admin)
-            print("✅ Created admin@vogo.app")
+            print("✅ Created admin@vogoplus.app")
 
         # Update test user
-        test = db.query(User).filter(User.email == "test@vogo.app").first()
+        test = db.query(User).filter(User.email == "test@vogoplus.app").first()
         if test:
             test.password_hash = hash_password("TestPass123!")
             test.role = UserRole.USER
             test.is_active = True
-            print("✅ Updated test@vogo.app password")
+            print("✅ Updated test@vogoplus.app password")
         else:
             # Create test user if doesn't exist
             test = User(
-                email="test@vogo.app",
+                email="test@vogoplus.app",
                 password_hash=hash_password("TestPass123!"),
                 role=UserRole.USER,
                 is_active=True,
             )
             db.add(test)
-            print("✅ Created test@vogo.app")
+            print("✅ Created test@vogoplus.app")
 
         db.commit()
         print("\n🎉 Passwords fixed! You can now login with:")
-        print("   📧 test@vogo.app / TestPass123!")
-        print("   👑 admin@vogo.app / ChangeMe123!")
+        print("   📧 test@vogoplus.app / TestPass123!")
+        print("   👑 admin@vogoplus.app / ChangeMe123!")
 
     except Exception as e:
         print(f"❌ Error: {e}")

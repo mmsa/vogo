@@ -106,7 +106,7 @@ async def hello(
     )
 
     if user_memberships == 0:
-        message = "👋 Hi! I'm your VogPlus.ai assistant. Add your memberships and I'll help you discover and use all your benefits!"
+        message = "👋 Hi! I'm your VogPlus.app assistant. Add your memberships and I'll help you discover and use all your benefits!"
     elif benefits_count == 0:
         message = f"👋 Hi! I see you have {user_memberships} membership{'s' if user_memberships > 1 else ''}. We're discovering benefits for you now. Ask me anything!"
     else:

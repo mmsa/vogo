@@ -1,7 +1,7 @@
 """User membership API endpoints."""
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, defer
 from app.core.db import get_db
 from app.models import UserMembership, User, Membership
 from app.schemas import UserMembershipCreate, UserMembershipRead
@@ -20,8 +20,10 @@ def create_user_membership(
         raise HTTPException(status_code=404, detail="User not found")
 
     # Verify membership exists
+    # Defer plan_tier to avoid errors if column doesn't exist yet (migration not run)
     membership = (
         db.query(Membership)
+        .options(defer(Membership.plan_tier))
         .filter(Membership.id == user_membership.membership_id)
         .first()
     )

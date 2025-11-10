@@ -17,7 +17,7 @@ def main():
 
     try:
         # Get admin user
-        admin = db.query(User).filter(User.email == "admin@vogo.app").first()
+        admin = db.query(User).filter(User.email == "admin@vogoplus.app").first()
         if not admin:
             print("❌ Admin user not found")
             return

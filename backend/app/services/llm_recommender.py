@@ -12,6 +12,8 @@ from app.schemas.llm import RecommendationDTO, LLMRecommendationOut
 from app.schemas.benefit import BenefitRead
 from app.services.llm_prompts import RECO_PROMPT, ADD_FLOW_PROMPT
 from app.services.id_map import resolve_benefit_ids
+from app.services.membership_tiers import get_plan_tier, is_upgrade
+from sqlalchemy.orm import defer
 
 
 client = OpenAI(api_key=settings.openai_api_key) if settings.openai_api_key else None
@@ -237,9 +239,11 @@ def generate_llm_recommendations(
         Tuple of (recommendations, relevant_benefits)
     """
     # Get user's memberships
+    # Defer plan_tier to avoid errors if column doesn't exist yet (migration not run)
     user_memberships = (
         db.query(UserMembership, Membership)
         .join(Membership, UserMembership.membership_id == Membership.id)
+        .options(defer(Membership.plan_tier))
         .filter(UserMembership.user_id == user_id)
         .all()
     )
@@ -253,6 +257,7 @@ def generate_llm_recommendations(
     benefits = (
         db.query(Benefit, Membership)
         .join(Membership, Benefit.membership_id == Membership.id)
+        .options(defer(Membership.plan_tier))
         .filter(
             Benefit.membership_id.in_(membership_ids),
             Benefit.validation_status == "approved",
@@ -278,10 +283,46 @@ def generate_llm_recommendations(
                 if b.category and category in b.category.lower()
             ]
 
-    # Build payload for LLM
+    # Get available memberships (for add_membership recommendations)
+    # Exclude memberships user already has
+    # Defer plan_tier to avoid errors if column doesn't exist yet (migration not run)
+    available_memberships = (
+        db.query(Membership)
+        .options(defer(Membership.plan_tier))
+        .filter(
+            Membership.status == "active",
+            ~Membership.id.in_(membership_ids)
+        )
+        .limit(50)  # Limit to avoid huge payloads
+        .all()
+    )
+    
+    # Get benefits for available memberships to help AI understand what they offer
+    available_membership_ids = [m.id for m in available_memberships]
+    available_benefits = []
+    if available_membership_ids:
+        available_benefits_query = (
+            db.query(Benefit, Membership)
+            .join(Membership, Benefit.membership_id == Membership.id)
+            .filter(
+                Benefit.membership_id.in_(available_membership_ids),
+                Benefit.validation_status == "approved",
+            )
+            .limit(200)  # Limit to avoid huge payloads
+        )
+        available_benefits = available_benefits_query.all()
+    
+    # Build payload for LLM with tier information
     user_data = {
         "user_memberships": [
-            {"slug": m.provider_slug, "name": m.name} for _, m in user_memberships
+            {
+                "slug": m.provider_slug,
+                "name": m.name,
+                "provider_name": m.provider_name,
+                "plan_name": m.plan_name,
+                "plan_tier": getattr(m, 'plan_tier', None) or get_plan_tier(m.provider_name or "", m.plan_name or "")
+            }
+            for _, m in user_memberships
         ],
         "benefits": [
             {
@@ -294,6 +335,26 @@ def generate_llm_recommendations(
                 "source_url": b.source_url,
             }
             for b, m in benefits
+        ],
+        "available_memberships": [
+            {
+                "slug": m.provider_slug,
+                "name": m.name,
+                "provider_name": m.provider_name,
+                "plan_name": m.plan_name,
+                "plan_tier": getattr(m, 'plan_tier', None) or get_plan_tier(m.provider_name or "", m.plan_name or ""),
+                "benefits": [
+                    {
+                        "id": b.id,
+                        "title": b.title,
+                        "description": b.description,
+                        "category": b.category,
+                    }
+                    for b, mem in available_benefits
+                    if mem.id == m.id
+                ]
+            }
+            for m in available_memberships
         ],
         "context": context or {},
     }
@@ -321,6 +382,43 @@ def generate_llm_recommendations(
                 if len(set(membership_ids)) == 1:
                     print(f"Skipping overlap recommendation: all benefits from same membership {membership_ids[0]}")
                     continue
+            
+            # CRITICAL: Validate upgrade recommendations - ensure it's actually an upgrade
+            # NOTE: "switch" recommendations can suggest lower tiers if they save money - that's valid!
+            if rec_data.get("kind") == "upgrade":
+                membership_slug = rec_data.get("membership_slug")
+                if membership_slug:
+                    # Find the suggested membership
+                    # Defer plan_tier to avoid errors if column doesn't exist yet (migration not run)
+                    suggested_membership = (
+                        db.query(Membership)
+                        .options(defer(Membership.plan_tier))
+                        .filter(Membership.provider_slug == membership_slug)
+                        .first()
+                    )
+                    
+                    if suggested_membership:
+                        # Safely get tier - handle case where column might not exist
+                        suggested_tier = getattr(suggested_membership, 'plan_tier', None) or get_plan_tier(
+                            suggested_membership.provider_name or "",
+                            suggested_membership.plan_name or ""
+                        )
+                        
+                        # Find user's current membership from the same provider
+                        user_membership_slug = None
+                        for um, m in user_memberships:
+                            if m.provider_name == suggested_membership.provider_name:
+                                user_membership_slug = m.provider_slug
+                                current_tier = getattr(m, 'plan_tier', None) or get_plan_tier(
+                                    m.provider_name or "",
+                                    m.plan_name or ""
+                                )
+                                
+                                # Check if this is actually an upgrade (must be higher tier, same provider)
+                                if not is_upgrade(current_tier, suggested_tier):
+                                    print(f"Skipping invalid upgrade: {m.name} (tier {current_tier}) -> {suggested_membership.name} (tier {suggested_tier}) - not an upgrade! Use 'switch' kind if suggesting a downgrade that saves money.")
+                                    continue
+                                break
             
             rec_data["benefit_match_ids"] = benefit_ids
 
@@ -358,8 +456,12 @@ def smart_add_check(db: Session, user_id: int, candidate_slug: str) -> Dict[str,
         Dictionary with decision, explanation, alternatives, impacted benefits
     """
     # Get candidate membership
+    # Defer plan_tier to avoid errors if column doesn't exist yet (migration not run)
     candidate = (
-        db.query(Membership).filter(Membership.provider_slug == candidate_slug).first()
+        db.query(Membership)
+        .options(defer(Membership.plan_tier))
+        .filter(Membership.provider_slug == candidate_slug)
+        .first()
     )
 
     if not candidate:

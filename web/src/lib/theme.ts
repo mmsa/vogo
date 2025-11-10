@@ -1,5 +1,5 @@
 /**
- * Vogo Design System
+ * VogPlus.app Design System
  * Brand tokens, colors, and theme configuration
  */
 

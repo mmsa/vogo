@@ -1,0 +1,37 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Diamond shape -->
+  <path
+    d="M32 8 L56 32 L32 56 L8 32 Z"
+    stroke="#C0C0C0"
+    stroke-width="2"
+    fill="none"
+  />
+  
+  <!-- Checkmark with gradient -->
+  <defs>
+    <linearGradient id="checkmarkGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#8A2BE2" />
+      <stop offset="100%" stop-color="#00BFFF" />
+    </linearGradient>
+  </defs>
+  <path
+    d="M20 32 L28 40 L44 24"
+    stroke="url(#checkmarkGradient)"
+    stroke-width="4"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+  
+  <!-- Sparkle -->
+  <g transform="translate(48, 8)">
+    <circle cx="0" cy="0" r="4" fill="#00BFFF" opacity="0.8" />
+    <path
+      d="M0,-2.4 L0,2.4 M-2.4,0 L2.4,0"
+      stroke="#00BFFF"
+      stroke-width="1.5"
+      opacity="0.9"
+    />
+  </g>
+</svg>
+

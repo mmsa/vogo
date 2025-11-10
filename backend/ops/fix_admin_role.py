@@ -18,7 +18,7 @@ def fix_roles():
         print(f"  - ID: {user.id}, Email: {user.email}, Role: {user.role}")
     
     # Make certain users admin
-    admin_emails = ["admin@vogo.app", "test@vogo.app", "admin"]
+    admin_emails = ["admin@vogoplus.app", "test@vogoplus.app", "admin"]
     
     for email in admin_emails:
         user = db.query(User).filter(User.email == email).first()

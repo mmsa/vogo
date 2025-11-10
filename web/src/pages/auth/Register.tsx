@@ -5,6 +5,7 @@ import { useAuth } from "@/store/auth";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Logo } from "@/components/Logo";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -84,11 +85,8 @@ export default function Register() {
       <div className="w-full max-w-md space-y-8">
         {/* Logo */}
         <div className="text-center">
-          <div className="inline-flex items-center gap-2 mb-2">
-            <div className="bg-gradient-to-r from-primary to-primary-light rounded-xl px-4 py-2">
-              <span className="text-white font-bold text-2xl">VogPlus</span>
-            </div>
-            <span className="text-sm text-zinc-400 dark:text-zinc-500 font-medium">.ai</span>
+          <div className="flex justify-center mb-4">
+            <Logo size="lg" showText={true} />
           </div>
           <p className="text-zinc-600 dark:text-zinc-400 text-sm mt-2">
             Intelligence for your benefits
@@ -100,7 +98,7 @@ export default function Register() {
           <CardHeader>
             <CardTitle>Create your account</CardTitle>
             <CardDescription>
-              Get started with VogPlus.ai to unlock your benefits
+              Get started with VogPlus.app to unlock your benefits
             </CardDescription>
           </CardHeader>
           <CardContent>

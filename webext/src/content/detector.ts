@@ -1,14 +1,14 @@
 // Inject floating badge when benefits are found
 function injectBadge(message: string, benefitCount: number) {
   // Remove existing badge if any
-  const existing = document.getElementById("vogplus-badge");
+  const existing = document.getElementById("vogoplus-badge");
   if (existing) {
     existing.remove();
   }
 
   // Create badge element
   const badge = document.createElement("div");
-  badge.id = "vogplus-badge";
+    badge.id = "vogoplus-badge";
   badge.innerHTML = `
     <div style="
       position: fixed;
@@ -30,11 +30,11 @@ function injectBadge(message: string, benefitCount: number) {
       <div style="display: flex; align-items: center; gap: 12px;">
         <div style="font-size: 24px;">💎</div>
         <div style="flex: 1;">
-          <div style="font-weight: 700; margin-bottom: 4px; font-size: 15px;">VogPlus.ai Found Perks!</div>
+          <div style="font-weight: 700; margin-bottom: 4px; font-size: 15px;">VogPlus.app Found Perks!</div>
           <div style="font-size: 13px; opacity: 0.95; line-height: 1.4;">${message}</div>
           ${benefitCount > 0 ? `<div style="font-size: 12px; opacity: 0.9; margin-top: 6px;">${benefitCount} benefit${benefitCount > 1 ? 's' : ''} available</div>` : ''}
         </div>
-        <button id="vogplus-badge-close" style="
+        <button id="vogoplus-badge-close" style="
           background: rgba(255, 255, 255, 0.2);
           border: none;
           color: white;
@@ -79,7 +79,7 @@ function injectBadge(message: string, benefitCount: number) {
   document.body.appendChild(badge);
 
   // Close button handler
-  const closeBtn = badge.querySelector("#vogplus-badge-close");
+  const closeBtn = badge.querySelector("#vogoplus-badge-close");
   if (closeBtn) {
     closeBtn.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -109,7 +109,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg?.type === "SHOW_BADGE") {
     injectBadge(msg.message, msg.benefitCount || 0);
   } else if (msg?.type === "HIDE_BADGE") {
-    const badge = document.getElementById("vogplus-badge");
+    const badge = document.getElementById("vogoplus-badge");
     if (badge) {
       badge.style.animation = "slideOutRight 0.3s ease-out";
       setTimeout(() => badge.remove(), 300);

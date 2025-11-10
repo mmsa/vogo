@@ -31,7 +31,7 @@ class RecommendationOut(BaseModel):
 
     title: str
     rationale: str
-    kind: Literal["overlap", "unused", "switch", "bundle", "tip"]
+    kind: Literal["overlap", "unused", "switch", "bundle", "tip", "add_membership", "upgrade"]
     estimated_saving_min: Optional[float] = None
     estimated_saving_max: Optional[float] = None
     action_url: Optional[str] = None

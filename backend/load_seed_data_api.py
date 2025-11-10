@@ -9,7 +9,7 @@ print("🌱 Loading seed data into database...\n")
 
 # Login as admin
 r = requests.post(f"{API_BASE}/api/auth/login",
-    json={'email': 'admin@vogo.app', 'password': 'ChangeMe123!'})
+    json={'email': 'admin@vogoplus.app', 'password': 'ChangeMe123!'})
 
 if r.status_code != 200:
     print(f"❌ Login failed: {r.status_code}")

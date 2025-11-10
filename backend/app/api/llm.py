@@ -46,7 +46,11 @@ def get_llm_recommendations(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to generate recommendations: {str(e)}")
+        import traceback
+        error_msg = str(e)
+        print(f"Error in get_llm_recommendations: {error_msg}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to generate recommendations: {error_msg}")
 
 
 @router.post("/smart-add", response_model=SmartAddOut)
