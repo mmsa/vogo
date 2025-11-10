@@ -199,7 +199,7 @@ async def generate_user_message(
     is_comparison_site = any(word in context['page']['domain'].lower() or word in context['page']['title'].lower() 
                             for word in ['compare', 'comparison', 'shop', 'find', 'search', 'deals', 'best'])
     
-    prompt = f"""You're VogPlus.app assistant. User is browsing a website and you found relevant benefits they ALREADY HAVE.
+    prompt = f"""You're vogoplus.app assistant. User is browsing a website and you found relevant benefits they ALREADY HAVE.
 
 Current page: {context['page']['domain']}
 Page title: {context['page']['title']}
@@ -244,7 +244,7 @@ Focus on the TOP matching benefit with highest score.
             messages=[
                 {
                     "role": "system",
-                    "content": "You are VogPlus.app benefits assistant. Be concise and helpful.",
+                    "content": "You are vogoplus.app benefits assistant. Be concise and helpful.",
                 },
                 {"role": "user", "content": prompt},
             ],
