@@ -5,7 +5,7 @@ root.innerHTML = `
   <div style="font-family:sans-serif;padding:16px;width:380px;background:#f8fafc">
     <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;padding:20px;border-radius:16px;margin-bottom:16px;box-shadow:0 4px 12px rgba(102,126,234,0.3)">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-        <img src="${chrome.runtime.getURL('logo.svg')}" alt="vogoplus.app" style="width:24px;height:24px" />
+        <img src="${chrome.runtime.getURL('logo.png')}" alt="vogoplus.app" style="width:24px;height:24px" />
         <div style="font-size:22px;font-weight:700">vogoplus.app</div>
       </div>
       <div style="font-size:14px;opacity:0.95" id="subtitle">Loading...</div>
@@ -33,7 +33,7 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
   // Get token - FIX: get the whole result object first
   const storage = await chrome.storage.sync.get(["accessToken", "apiBase"]);
   const accessToken = storage.accessToken;
-  const apiBase = storage.apiBase || "http://localhost:8000";
+  const apiBase = storage.apiBase || "https://app.vogoplus.app";
 
   console.log("Token check:", accessToken ? "FOUND" : "MISSING");
 
@@ -148,7 +148,7 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
 
     // Open app button
     openAppBtn.onclick = () => {
-      chrome.tabs.create({ url: "http://localhost:5173" });
+      chrome.tabs.create({ url: "https://app.vogoplus.app" });
     };
 
     // Focus email input
@@ -248,7 +248,7 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
     const openBtn = document.getElementById("openAppBtn");
     if (openBtn) {
       openBtn.onclick = () =>
-        chrome.tabs.create({ url: "http://localhost:5173" });
+        chrome.tabs.create({ url: "https://app.vogoplus.app" });
     }
   } catch (e) {
     console.error("Error fetching recommendations:", e);

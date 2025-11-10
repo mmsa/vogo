@@ -3,13 +3,11 @@
 import httpx
 from bs4 import BeautifulSoup
 from typing import Dict, Optional
-from openai import OpenAI
 from app.core.config import settings
+from app.core.openai_client import get_openai_client
 
-# Initialize OpenAI client
-openai_client = None
-if settings.openai_api_key:
-    openai_client = OpenAI(api_key=settings.openai_api_key)
+# Get shared OpenAI client
+openai_client = get_openai_client()
 
 
 def infer_metadata_from_url(url: str) -> Dict[str, str]:

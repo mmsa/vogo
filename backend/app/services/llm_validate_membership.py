@@ -2,16 +2,16 @@
 
 import json
 from typing import Dict, Any, Optional
-from openai import OpenAI
 from pydantic import BaseModel, ValidationError
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.core.config import settings
+from app.core.openai_client import get_openai_client
 from app.models import Membership
 
-# Initialize OpenAI client
-client = OpenAI(api_key=settings.openai_api_key) if settings.openai_api_key else None
+# Get shared OpenAI client
+client = get_openai_client()
 
 
 VALIDATION_PROMPT = """You are an expert at identifying and validating membership programs.

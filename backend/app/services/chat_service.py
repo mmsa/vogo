@@ -4,19 +4,16 @@ import json
 import re
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
-from openai import OpenAI
-
 from app.core.config import settings
+from app.core.openai_client import get_openai_client
 from app.services.semantic_matcher import get_embedding, cosine_similarity, create_benefit_text
 from app.models.membership import Membership
 from app.models.benefit import Benefit
 from app.models.user_membership import UserMembership
 
 
-# Initialize OpenAI client
-client = None
-if settings.openai_api_key:
-    client = OpenAI(api_key=settings.openai_api_key)
+# Get shared OpenAI client
+client = get_openai_client()
 
 
 # Keywords indicating user intent to purchase/subscribe

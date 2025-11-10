@@ -14,10 +14,10 @@ root.innerHTML = `
       id="api" 
       type="text"
       style="width: 100%; padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px;"
-      placeholder="http://localhost:8000"
+      placeholder="https://app.vogoplus.app"
     />
     <p style="font-size: 12px; color: #666; margin-top: 4px;">
-      Default: http://localhost:8000
+      Default: https://app.vogoplus.app (change for local development)
     </p>
   </div>
   
@@ -55,7 +55,7 @@ root.innerHTML = `
   const apiInput = document.getElementById("api") as HTMLInputElement;
   const autoCheck = document.getElementById("auto") as HTMLInputElement;
   
-  apiInput.value = (await gs("apiBase")) || "http://localhost:8000";
+  apiInput.value = (await gs("apiBase")) || "https://app.vogoplus.app";
   autoCheck.checked = !!(await gs("autoOpen"));
 })();
 

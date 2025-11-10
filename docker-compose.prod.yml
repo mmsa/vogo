@@ -40,11 +40,15 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       
       # CORS
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost,http://18.170.49.10}
+      # Default includes localhost for testing and production domains
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://app.vogoplus.app,https://www.vogoplus.app,http://localhost:5173,http://localhost:3000,chrome-extension://}
     volumes:
       - ./backend/alembic:/app/alembic
     networks:
       - vogo-network
+    # Expose port 8000 for host Nginx to proxy
+    ports:
+      - "8000:8000"
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')\""]
       interval: 30s
@@ -59,8 +63,9 @@ services:
     restart: unless-stopped
     depends_on:
       - api
+    # Expose on 8081 for host Nginx to proxy (not 80, since host Nginx uses port 80)
     ports:
-      - "80:80"
+      - "8081:80"
     networks:
       - vogo-network
     healthcheck:

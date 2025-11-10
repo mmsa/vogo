@@ -31,14 +31,19 @@ export default function Login() {
       });
 
       if (!response.ok) {
+        // Handle 404 specifically
+        if (response.status === 404) {
+          throw new Error("API endpoint not found. Please check if the backend is running.");
+        }
         const data = await response.json().catch(() => ({}));
-        throw new Error(data.detail || "Login failed");
+        throw new Error(data.detail || `Login failed (${response.status})`);
       }
 
       const data = await response.json();
       await login(data.access_token, data.refresh_token);
       navigate("/");
     } catch (err: any) {
+      console.error("Login error:", err);
       setError(err.message || "Invalid email or password");
     } finally {
       setLoading(false);
@@ -142,17 +147,6 @@ export default function Login() {
               >
                 Sign up
               </Link>
-            </div>
-
-            {/* Demo Credentials */}
-            <div className="mt-6 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-zinc-200 dark:border-zinc-700">
-              <p className="text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                Demo Credentials:
-              </p>
-              <div className="space-y-1 text-xs text-zinc-600 dark:text-zinc-400">
-                <p>📧 <strong>User:</strong> test@vogoplus.app / TestPass123!</p>
-                <p>👑 <strong>Admin:</strong> admin@vogoplus.app / ChangeMe123!</p>
-              </div>
             </div>
           </CardContent>
         </Card>

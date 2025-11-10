@@ -2,7 +2,7 @@
 
 import numpy as np
 from typing import List, Dict, Any, Tuple
-from openai import OpenAI
+from app.core.openai_client import get_openai_client
 from cachetools import TTLCache
 import hashlib
 import json
@@ -13,7 +13,7 @@ from app.services.page_scraper import metadata_to_text
 
 
 # Initialize OpenAI client with API key from settings
-client = OpenAI(api_key=settings.openai_api_key) if settings.openai_api_key else None
+client = get_openai_client()
 
 # Cache for embeddings (1 hour TTL, max 1000 entries)
 embedding_cache = TTLCache(maxsize=1000, ttl=3600)
