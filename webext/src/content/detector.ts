@@ -30,7 +30,7 @@ function injectBadge(message: string, benefitCount: number) {
       <div style="display: flex; align-items: center; gap: 12px;">
         <div style="font-size: 24px;">💎</div>
         <div style="flex: 1;">
-          <div style="font-weight: 700; margin-bottom: 4px; font-size: 15px;">VogPlus.app Found Perks!</div>
+          <div style="font-weight: 700; margin-bottom: 4px; font-size: 15px;">vogoplus.app Found Perks!</div>
           <div style="font-size: 13px; opacity: 0.95; line-height: 1.4;">${message}</div>
           ${benefitCount > 0 ? `<div style="font-size: 12px; opacity: 0.9; margin-top: 6px;">${benefitCount} benefit${benefitCount > 1 ? 's' : ''} available</div>` : ''}
         </div>

@@ -1,7 +1,7 @@
 #!/bin/bash
-# Build script for VogPlus Chrome Extension
+# Build script for vogoplus.app Chrome Extension
 
-echo "🔨 Building VogPlus Chrome Extension..."
+echo "🔨 Building vogoplus.app Chrome Extension..."
 
 # Run vite build
 npm run build
