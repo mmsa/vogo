@@ -117,7 +117,7 @@ jobs:
       - name: Debug Environment
         run: |
           echo "🔍 Debugging deployment environment..."
-          echo "EC2_HOST: 18.170.49.10"
+          echo "EC2_HOST: 13.134.32.251"
           echo "EC2_USER: ${{ secrets.EC2_USER || 'ubuntu' }}"
           echo "PROJECT_DIR: ${{ secrets.PROJECT_DIR || '/srv/vogo' }}"
           echo "SSH key configured: ${{ secrets.EC2_SSH_KEY != '' }}"
@@ -136,7 +136,7 @@ jobs:
           ssh-keygen -l -f ~/.ssh/id_rsa || (echo "❌ Invalid SSH key format" && exit 1)
           
           # Add host to known_hosts
-          ssh-keyscan -H 18.170.49.10 >> ~/.ssh/known_hosts 2>/dev/null
+          ssh-keyscan -H 13.134.32.251 >> ~/.ssh/known_hosts 2>/dev/null
           chmod 644 ~/.ssh/known_hosts
 
       - name: Test SSH Connection
@@ -147,7 +147,7 @@ jobs:
           
           # Test connection
           ssh -i ~/.ssh/id_rsa -o ConnectTimeout=10 -o StrictHostKeyChecking=no \
-            $EC2_USER@18.170.49.10 \
+            $EC2_USER@13.134.32.251 \
             'echo "✅ SSH connection successful" && whoami && pwd && uname -a'
 
       - name: Deploy Application
@@ -278,6 +278,16 @@ jobs:
           if [ -f "$PROJECT_DIR/scripts/nginx-app-site.conf" ]; then
             sudo cp "$PROJECT_DIR/scripts/nginx-app-site.conf" /etc/nginx/sites-available/vogoplus-app
             sudo ln -sf /etc/nginx/sites-available/vogoplus-app /etc/nginx/sites-enabled/vogoplus-app
+            
+            # Check if SSL certificates exist
+            if [ ! -f "/etc/letsencrypt/live/app.vogoplus.app/fullchain.pem" ]; then
+              echo "⚠️  SSL certificates not found for app.vogoplus.app"
+              echo "   Run: sudo bash $PROJECT_DIR/scripts/setup-ssl.sh"
+              echo "   Or: sudo certbot --nginx -d app.vogoplus.app"
+            else
+              echo "✅ SSL certificates found"
+            fi
+            
             sudo nginx -t && sudo systemctl reload nginx && echo "✅ Host Nginx configured"
           else
             echo "⚠️  nginx-app-site.conf not found, skipping host Nginx setup"
@@ -335,11 +345,11 @@ jobs:
             --exclude='.pytest_cache' \
             --exclude='.venv' \
             --exclude='backend/__pycache__' \
-            . $EC2_USER@18.170.49.10:/tmp/vogo-deploy/
+            . $EC2_USER@13.134.32.251:/tmp/vogo-deploy/
           
           # Execute deployment
-          scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no deploy_script.sh $EC2_USER@18.170.49.10:/tmp/
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $EC2_USER@18.170.49.10 \
+          scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no deploy_script.sh $EC2_USER@13.134.32.251:/tmp/
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $EC2_USER@13.134.32.251 \
             'chmod +x /tmp/deploy_script.sh && bash /tmp/deploy_script.sh'
 
       - name: Post-Deploy Validation
@@ -348,19 +358,19 @@ jobs:
           
           # Test landing page (www.vogoplus.app)
           echo "🌐 Testing landing page..."
-          curl -fsSI -H "Host: www.vogoplus.app" http://18.170.49.10/ >/dev/null && echo "✅ Landing page (www.vogoplus.app) reachable" || echo "⚠️  Landing page not reachable"
+          curl -fsSI -H "Host: www.vogoplus.app" http://13.134.32.251/ >/dev/null && echo "✅ Landing page (www.vogoplus.app) reachable" || echo "⚠️  Landing page not reachable"
           
           # Test web app (app.vogoplus.app)
           echo "🌐 Testing web app..."
-          curl -fsSI -H "Host: app.vogoplus.app" http://18.170.49.10/ >/dev/null && echo "✅ Web app (app.vogoplus.app) reachable" || echo "⚠️  Web app not reachable"
+          curl -fsSI -H "Host: app.vogoplus.app" http://13.134.32.251/ >/dev/null && echo "✅ Web app (app.vogoplus.app) reachable" || echo "⚠️  Web app not reachable"
           
           # Test API health check via app.vogoplus.app
           echo "🌐 Testing API health check..."
-          curl -fsS -H "Host: app.vogoplus.app" http://18.170.49.10/healthz | grep -q "ok" && echo "✅ API health check working" || echo "⚠️  API health check failed"
+          curl -fsS -H "Host: app.vogoplus.app" http://13.134.32.251/healthz | grep -q "ok" && echo "✅ API health check working" || echo "⚠️  API health check failed"
           
           # Test API endpoint via app.vogoplus.app
           echo "🌐 Testing API endpoint..."
-          curl -fsS -H "Host: app.vogoplus.app" http://18.170.49.10/api/auth/login -X POST -H "Content-Type: application/json" -d '{"email":"test","password":"test"}' >/dev/null 2>&1 && echo "✅ API endpoint accessible (expected 401)" || echo "⚠️  API endpoint test (expected 401/400)"
+          curl -fsS -H "Host: app.vogoplus.app" http://13.134.32.251/api/auth/login -X POST -H "Content-Type: application/json" -d '{"email":"test","password":"test"}' >/dev/null 2>&1 && echo "✅ API endpoint accessible (expected 401)" || echo "⚠️  API endpoint test (expected 401/400)"
           
           echo ""
           echo "🎉 Deployment validation successful!"
@@ -378,6 +388,6 @@ jobs:
           EC2_USER="${{ secrets.EC2_USER || 'ubuntu' }}"
           PROJECT_DIR="${{ secrets.PROJECT_DIR || '/srv/vogo' }}"
           
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $EC2_USER@18.170.49.10 \
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $EC2_USER@13.134.32.251 \
             "cd $PROJECT_DIR && (docker compose -f docker-compose.prod.yml logs --tail=100 || docker-compose -f docker-compose.prod.yml logs --tail=100)" || true
 
