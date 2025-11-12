@@ -197,12 +197,28 @@ jobs:
           PROJECT_DIR="${{ secrets.PROJECT_DIR || '/srv/vogo' }}"
           echo "📁 Setting up project directory: $PROJECT_DIR"
           sudo mkdir -p "$PROJECT_DIR"
-          sudo chown "$USER":"$USER" "$PROJECT_DIR"
+          sudo chown -R "$USER":"$USER" "$PROJECT_DIR"
+          
+          # Fix ownership of /tmp/vogo-deploy if it exists
+          if [ -d "/tmp/vogo-deploy" ]; then
+            echo "🔧 Fixing ownership of deployment files..."
+            sudo chown -R "$USER":"$USER" /tmp/vogo-deploy || true
+          fi
           
           # Copy repository files
           echo "📥 Copying repository files..."
           if [ -d "/tmp/vogo-deploy" ]; then
-            rsync -az --delete /tmp/vogo-deploy/ "$PROJECT_DIR"/
+            # Clean up project directory first (with proper permissions)
+            if [ -d "$PROJECT_DIR" ] && [ "$(ls -A $PROJECT_DIR 2>/dev/null)" ]; then
+              echo "🧹 Cleaning up existing project directory..."
+              sudo rm -rf "$PROJECT_DIR"/* "$PROJECT_DIR"/.[!.]* "$PROJECT_DIR"/..?* 2>/dev/null || true
+            fi
+            # Ensure project directory has correct ownership
+            sudo chown -R "$USER":"$USER" "$PROJECT_DIR"
+            # Copy files with proper ownership
+            rsync -az --delete --no-perms --no-owner --no-group /tmp/vogo-deploy/ "$PROJECT_DIR"/
+            # Fix ownership after copy
+            sudo chown -R "$USER":"$USER" "$PROJECT_DIR"
             cd "$PROJECT_DIR"
           else
             echo "❌ Repository files not found in /tmp/vogo-deploy"
@@ -338,7 +354,11 @@ jobs:
           
           # Transfer repository files to EC2
           echo "📤 Transferring repository files to EC2..."
-          rsync -az --delete -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
+          # Clean up and prepare /tmp/vogo-deploy on EC2 first
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $EC2_USER@13.134.32.251 \
+            "sudo rm -rf /tmp/vogo-deploy && sudo mkdir -p /tmp/vogo-deploy && sudo chown -R $EC2_USER:$EC2_USER /tmp/vogo-deploy"
+          
+          rsync -az --delete --no-perms --no-owner --no-group -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
             --exclude='.git' \
             --exclude='node_modules' \
             --exclude='__pycache__' \
@@ -346,6 +366,10 @@ jobs:
             --exclude='.venv' \
             --exclude='backend/__pycache__' \
             . $EC2_USER@13.134.32.251:/tmp/vogo-deploy/
+          
+          # Fix ownership after transfer
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $EC2_USER@13.134.32.251 \
+            "sudo chown -R $EC2_USER:$EC2_USER /tmp/vogo-deploy"
           
           # Execute deployment
           scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no deploy_script.sh $EC2_USER@13.134.32.251:/tmp/
