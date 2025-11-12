@@ -96,8 +96,8 @@ if [ -f ".github/workflows/deploy.yml" ]; then
         echo -e "  ${YELLOW}⚠${NC} OPENAI_API_KEY not referenced (optional)"
     fi
     
-    if grep -q "18.170.49.10" .github/workflows/deploy.yml; then
-        echo -e "  ${GREEN}✓${NC} Configured for EC2 18.170.49.10"
+    if grep -q "13.134.32.251" .github/workflows/deploy.yml; then
+        echo -e "  ${GREEN}✓${NC} Configured for EC2 13.134.32.251"
     else
         echo -e "  ${RED}✗${NC} EC2 IP not configured"
     fi
@@ -133,12 +133,12 @@ echo ""
 echo "🔐 Testing EC2 SSH connectivity..."
 echo "   (This will prompt for SSH if key not configured)"
 
-if ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no ubuntu@18.170.49.10 'exit' 2>/dev/null; then
+if ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no ubuntu@13.134.32.251 'exit' 2>/dev/null; then
     echo -e "  ${GREEN}✓${NC} SSH connection successful"
 else
     echo -e "  ${YELLOW}⚠${NC} Could not connect to EC2 (configure SSH key)"
     echo "      1. Generate key: ssh-keygen -t rsa -b 4096"
-    echo "      2. Copy to EC2: ssh-copy-id ubuntu@18.170.49.10"
+    echo "      2. Copy to EC2: ssh-copy-id ubuntu@13.134.32.251"
     echo "      3. Add to GitHub Secrets as EC2_SSH_KEY"
 fi
 
@@ -150,7 +150,7 @@ if [ $MISSING -eq 0 ] && [ $ENV_MISSING -eq 0 ]; then
     echo ""
     echo "Next steps:"
     echo "  1. Configure GitHub Secrets (see SETUP_CHECKLIST.md)"
-    echo "  2. Run: ssh ubuntu@18.170.49.10 'bash -s' < scripts/setup-ec2.sh"
+    echo "  2. Run: ssh ubuntu@13.134.32.251 'bash -s' < scripts/setup-ec2.sh"
     echo "  3. Run: git push origin main"
     echo "  4. Monitor: https://github.com/YOUR_USERNAME/vogo/actions"
 else
