@@ -355,7 +355,7 @@ jobs:
           # Transfer repository files to EC2
           echo "📤 Transferring repository files to EC2..."
           # Clean up and prepare /tmp/vogo-deploy on EC2 first
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $EC2_USER@18.170.49.10 \
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $EC2_USER@13.134.32.251 \
             "sudo rm -rf /tmp/vogo-deploy && sudo mkdir -p /tmp/vogo-deploy && sudo chown -R $EC2_USER:$EC2_USER /tmp/vogo-deploy"
           
           rsync -az --delete --no-perms --no-owner --no-group -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
@@ -368,7 +368,7 @@ jobs:
             . $EC2_USER@13.134.32.251:/tmp/vogo-deploy/
           
           # Fix ownership after transfer
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $EC2_USER@18.170.49.10 \
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $EC2_USER@13.134.32.251 \
             "sudo chown -R $EC2_USER:$EC2_USER /tmp/vogo-deploy"
           
           # Execute deployment
