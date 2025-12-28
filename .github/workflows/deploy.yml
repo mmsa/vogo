@@ -245,9 +245,9 @@ jobs:
           # Deploy with Docker Compose
           echo "🐳 Deploying with Docker Compose..."
           
-          # Stop existing containers completely
+          # Stop existing containers completely (preserve database volume)
           echo "🛑 Stopping existing containers..."
-          $DOCKER_COMPOSE_CMD -f docker-compose.prod.yml down --remove-orphans --volumes || true
+          $DOCKER_COMPOSE_CMD -f docker-compose.prod.yml down --remove-orphans || true
           
           # Force remove ALL containers (including stopped ones with name conflicts)
           echo "🧹 Force removing all containers..."
@@ -256,11 +256,12 @@ jobs:
             docker rm -f $CONTAINERS || true
           fi
           
-          # Clean up old images, networks, and volumes
-          echo "🧹 Cleaning up Docker resources..."
-          docker system prune -af --volumes || true
+          # Clean up old images and networks (preserve volumes to keep database data)
+          echo "🧹 Cleaning up Docker resources (preserving database volume)..."
+          docker system prune -af || true
           docker network prune -f || true
-          docker volume prune -f || true
+          # Only prune volumes that are not in use AND not the postgres_data volume
+          docker volume ls -q | grep -v "vogo.*postgres_data" | xargs -r docker volume rm || true
           
           # Pull latest base images
           echo "📥 Pulling latest base images..."
