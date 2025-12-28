@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "vogoplus.app",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "description": "Intelligence for your benefits. Discover, manage, and optimize your membership perks.",
   "icons": {
     "16": "logo.png",
@@ -17,9 +17,10 @@
     }
   },
   "options_page": "options/index.html",
-  "background": { "service_worker": "bg/serviceWorker.js", "type": "module" },
-  "permissions": ["storage", "activeTab", "tabs", "scripting"],
-  "host_permissions": [
-    "https://app.vogoplus.app/*"
-  ]
+  "background": {
+    "service_worker": "bg/serviceWorker.js",
+    "type": "module"
+  },
+  "permissions": ["storage", "tabs", "scripting"],
+  "host_permissions": ["https://app.vogoplus.app/*"]
 }

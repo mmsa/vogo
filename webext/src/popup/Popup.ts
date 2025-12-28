@@ -5,7 +5,9 @@ root.innerHTML = `
   <div style="font-family:sans-serif;padding:16px;width:380px;background:#f8fafc">
     <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;padding:20px;border-radius:16px;margin-bottom:16px;box-shadow:0 4px 12px rgba(102,126,234,0.3)">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-        <img src="${chrome.runtime.getURL('logo.png')}" alt="vogoplus.app" style="width:24px;height:24px" />
+        <img src="${chrome.runtime.getURL(
+          "logo.png"
+        )}" alt="vogoplus.app" style="width:24px;height:24px" />
         <div style="font-size:22px;font-weight:700">vogoplus.app</div>
       </div>
       <div style="font-size:14px;opacity:0.95" id="subtitle">Loading...</div>
@@ -28,7 +30,11 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
   }
 
   // Skip chrome:// and extension pages
-  if (tab.url.startsWith("chrome://") || tab.url.startsWith("chrome-extension://") || tab.url.startsWith("moz-extension://")) {
+  if (
+    tab.url.startsWith("chrome://") ||
+    tab.url.startsWith("chrome-extension://") ||
+    tab.url.startsWith("moz-extension://")
+  ) {
     content.innerHTML = `
       <div style="color:#dc2626;font-weight:600">❌ Cannot analyze this page</div>
       <div style="font-size:13px;color:#666;margin-top:8px">Please navigate to a regular website.</div>
@@ -145,10 +151,10 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
         });
 
         console.log("✅ Token saved, reloading popup...");
-        
+
         // Small delay to ensure storage is persisted
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
         // Reload popup to show recommendations
         location.reload();
       } catch (e) {
@@ -177,7 +183,42 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
     return;
   }
 
-  // Fetch recommendations DIRECTLY using SEMANTIC API
+  // Check if background worker already has data for this hostname
+  const lastRecs = await chrome.storage.local.get("lastRecs");
+  const cachedData = lastRecs.lastRecs;
+
+  // Use cached data if available and matches current hostname
+  if (cachedData && cachedData.hostname === hostname && cachedData.data) {
+    console.log("Using cached data from background worker");
+    const data = cachedData.data;
+
+    // Show cached results immediately
+    if (data.recommendations && data.recommendations.length > 0) {
+      // Show the AI-generated message
+      content.innerHTML = `
+        <div style="text-align:left">
+          <div style="background:linear-gradient(135deg,#10b981 0%,#059669 100%);color:white;padding:16px;border-radius:12px;margin-bottom:16px;box-shadow:0 4px 12px rgba(16,185,129,0.3)">
+            <div style="font-size:20px;margin-bottom:8px">✨</div>
+            <div style="font-size:15px;font-weight:600;line-height:1.5">${
+              data.recommendations[0]?.title || "You have benefits available!"
+            }</div>
+          </div>
+          <button id="openAppBtn" style="background:#667eea;color:white;border:none;padding:12px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;width:100%;margin-top:8px;transition:all 0.2s;box-shadow:0 2px 6px rgba(102,126,234,0.3)">
+            🚀 View Full Dashboard
+          </button>
+        </div>
+      `;
+
+      const openBtn = document.getElementById("openAppBtn");
+      if (openBtn) {
+        openBtn.onclick = () =>
+          chrome.tabs.create({ url: "https://app.vogoplus.app" });
+      }
+      return;
+    }
+  }
+
+  // If no cached data or cache miss, fetch fresh (background worker should handle this, but fallback)
   try {
     content.innerHTML = `
       <div style="color:#667eea;font-weight:600;margin-bottom:8px">⏳ Analyzing page...</div>
@@ -210,19 +251,24 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
     // Send message to content script to show/hide badge
     try {
       if (data.has_matches) {
-        chrome.tabs.sendMessage(tab.id!, {
-          type: "SHOW_BADGE",
-          message: data.message || "You have benefits available on this site!",
-          benefitCount: data.highlight_benefit_ids?.length || 0,
-        }).catch(() => {
-          // Content script might not be injected, that's okay
-        });
+        chrome.tabs
+          .sendMessage(tab.id!, {
+            type: "SHOW_BADGE",
+            message:
+              data.message || "You have benefits available on this site!",
+            benefitCount: data.highlight_benefit_ids?.length || 0,
+          })
+          .catch(() => {
+            // Content script might not be injected, that's okay
+          });
       } else {
-        chrome.tabs.sendMessage(tab.id!, {
-          type: "HIDE_BADGE",
-        }).catch(() => {
-          // Content script might not be injected, that's okay
-        });
+        chrome.tabs
+          .sendMessage(tab.id!, {
+            type: "HIDE_BADGE",
+          })
+          .catch(() => {
+            // Content script might not be injected, that's okay
+          });
       }
     } catch (e) {
       // Ignore errors - badge display is optional
