@@ -21,11 +21,5 @@
   "permissions": ["storage", "activeTab", "tabs", "scripting"],
   "host_permissions": [
     "https://app.vogoplus.app/*"
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": ["logo.png"],
-      "matches": ["<all_urls>"]
-    }
   ]
 }
