@@ -38,6 +38,10 @@ export const useAuth = create<AuthState>()(
       login: async (accessToken: string, refreshToken: string) => {
         set({ accessToken, refreshToken });
         
+        // Clear user-specific caches when logging in (in case switching accounts)
+        localStorage.removeItem("vogo_cache_ai");
+        localStorage.removeItem("vogo_cache_rule");
+        
         // Load user profile after login
         try {
           const response = await fetch('/api/auth/me', {
@@ -69,6 +73,10 @@ export const useAuth = create<AuthState>()(
             body: JSON.stringify({ refresh_token: refreshToken }),
           }).catch(console.error);
         }
+        
+        // Clear user-specific caches
+        localStorage.removeItem("vogo_cache_ai");
+        localStorage.removeItem("vogo_cache_rule");
         
         // Clear local state
         set({

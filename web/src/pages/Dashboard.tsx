@@ -39,17 +39,23 @@ export default function Dashboard() {
       if (cachedAI) {
         try {
           const cached = JSON.parse(cachedAI);
-          const filteredCached = cached.recs.filter(
-            (rec: Recommendation) => rec.kind === "overlap" || rec.kind === "tip" || rec.kind === "add_membership" || rec.kind === "upgrade"
-          );
-          // Deduplicate by title to avoid duplicates
-          const uniqueCached = filteredCached.filter((rec: Recommendation, index: number, self: Recommendation[]) => 
-            index === self.findIndex((r) => r.title === rec.title && r.kind === rec.kind)
-          );
-          setRecommendations(uniqueCached);
-          setLoading(false);
-          // Don't refresh in background - only refresh when cache is cleared (memberships changed)
-          return;
+          // Verify cache belongs to current user (safety check)
+          if (cached.userId && cached.userId !== user.id) {
+            // Cache is from a different user, ignore it
+            localStorage.removeItem("vogo_cache_ai");
+          } else {
+            const filteredCached = cached.recs.filter(
+              (rec: Recommendation) => rec.kind === "overlap" || rec.kind === "tip" || rec.kind === "add_membership" || rec.kind === "upgrade"
+            );
+            // Deduplicate by title to avoid duplicates
+            const uniqueCached = filteredCached.filter((rec: Recommendation, index: number, self: Recommendation[]) => 
+              index === self.findIndex((r) => r.title === rec.title && r.kind === rec.kind)
+            );
+            setRecommendations(uniqueCached);
+            setLoading(false);
+            // Don't refresh in background - only refresh when cache is cleared (memberships changed)
+            return;
+          }
         } catch (e) {
           // Cache parse failed, continue to load fresh
           console.error("Cache parse error:", e);
