@@ -145,6 +145,14 @@ export function AppHeader() {
 
                     {/* Menu Items */}
                     <div className="p-2">
+                      <Link
+                        to="/privacy"
+                        onClick={() => setShowUserMenu(false)}
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                      >
+                        <Shield className="h-4 w-4" />
+                        Privacy Policy
+                      </Link>
                       <button
                         onClick={() => {
                           setShowUserMenu(false);

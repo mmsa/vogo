@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { CreditCard, Gift, Lightbulb, Plus, Sparkles, TrendingUp, ArrowRight } from "lucide-react";
+import { CreditCard, Gift, Lightbulb, Plus, Sparkles, TrendingUp, ArrowRight, Shield } from "lucide-react";
 import { motion } from "framer-motion";
 import { api, Benefit, Recommendation } from "@/lib/api";
 import { useAuth } from "@/store/auth";
@@ -299,6 +299,23 @@ export default function Dashboard() {
           </Link>
         </Card>
       )}
+
+      {/* Footer with Privacy Link */}
+      <div className="pt-8 border-t border-zinc-200 dark:border-zinc-800">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-zinc-600 dark:text-zinc-400">
+          <div className="flex items-center gap-2">
+            <Shield className="w-4 h-4" />
+            <span>Your data is secure and private</span>
+          </div>
+          <Link
+            to="/privacy"
+            className="text-primary hover:text-primary-dark transition-colors font-medium flex items-center gap-1"
+          >
+            Privacy Policy
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }
