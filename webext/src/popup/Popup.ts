@@ -27,8 +27,28 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
     return;
   }
 
+  // Skip chrome:// and extension pages
+  if (tab.url.startsWith("chrome://") || tab.url.startsWith("chrome-extension://") || tab.url.startsWith("moz-extension://")) {
+    content.innerHTML = `
+      <div style="color:#dc2626;font-weight:600">❌ Cannot analyze this page</div>
+      <div style="font-size:13px;color:#666;margin-top:8px">Please navigate to a regular website.</div>
+    `;
+    return;
+  }
+
   const hostname = new URL(tab.url).hostname;
   subtitle.textContent = hostname;
+
+  // Inject content script for badge display (only when popup is opened - activeTab permission)
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id! },
+      files: ["content/detector.js"],
+    });
+  } catch (e) {
+    // Content script injection failed (might be on restricted page), continue anyway
+    console.log("Could not inject content script:", e);
+  }
 
   // Get token - FIX: get the whole result object first
   const storage = await chrome.storage.sync.get(["accessToken", "apiBase"]);
@@ -186,6 +206,27 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
     const data = await response.json();
 
     console.log("Semantic API Response:", data);
+
+    // Send message to content script to show/hide badge
+    try {
+      if (data.has_matches) {
+        chrome.tabs.sendMessage(tab.id!, {
+          type: "SHOW_BADGE",
+          message: data.message || "You have benefits available on this site!",
+          benefitCount: data.highlight_benefit_ids?.length || 0,
+        }).catch(() => {
+          // Content script might not be injected, that's okay
+        });
+      } else {
+        chrome.tabs.sendMessage(tab.id!, {
+          type: "HIDE_BADGE",
+        }).catch(() => {
+          // Content script might not be injected, that's okay
+        });
+      }
+    } catch (e) {
+      // Ignore errors - badge display is optional
+    }
 
     if (!data.has_matches) {
       content.innerHTML = `
