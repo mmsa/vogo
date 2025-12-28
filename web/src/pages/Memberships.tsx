@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Plus,
@@ -10,6 +10,9 @@ import {
   ChevronLeft,
   ChevronRight,
   CreditCard,
+  Upload,
+  FileText,
+  Loader2,
 } from "lucide-react";
 import {
   api,
@@ -85,6 +88,13 @@ export default function Memberships() {
   const [validatedMembershipId, setValidatedMembershipId] = useState<number | null>(null);
   const [confirmAddMembership, setConfirmAddMembership] = useState<Membership | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<Membership[] | null>(null);
+  
+  // Bank statement upload state
+  const [showBankStatementUpload, setShowBankStatementUpload] = useState(false);
+  const [uploadingStatement, setUploadingStatement] = useState(false);
+  const [uploadResult, setUploadResult] = useState<any>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (user?.id) {
@@ -267,6 +277,48 @@ export default function Memberships() {
     } finally {
       setRemovingMembership(null);
     }
+  };
+
+  const handleBankStatementUpload = async (file: File) => {
+    if (!file.name.endsWith('.pdf')) {
+      setUploadError("Please upload a PDF file");
+      return;
+    }
+
+    try {
+      setUploadingStatement(true);
+      setUploadError(null);
+      setUploadResult(null);
+
+      const result = await api.uploadBankStatement(file);
+      setUploadResult(result);
+
+      // Reload memberships to show newly added ones
+      await loadData();
+      
+      // Clear caches
+      localStorage.removeItem("vogo_cache_ai");
+      localStorage.removeItem("vogo_cache_rule");
+    } catch (error: any) {
+      console.error("Bank statement upload failed:", error);
+      setUploadError(error.message || "Failed to process bank statement");
+    } finally {
+      setUploadingStatement(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file && file.name.endsWith('.pdf')) {
+      handleBankStatementUpload(file);
+    } else {
+      setUploadError("Please drop a PDF file");
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
   };
 
   // New membership validation and discovery
@@ -538,10 +590,20 @@ export default function Memberships() {
             Manage your active memberships and discover new ones
           </p>
         </div>
-        <Button onClick={() => setShowModal(true)} className="gap-2 shrink-0">
-          <Plus className="w-5 h-5" />
-          Add Memberships
-        </Button>
+        <div className="flex gap-2 shrink-0">
+          <Button 
+            onClick={() => setShowBankStatementUpload(true)} 
+            variant="outline"
+            className="gap-2"
+          >
+            <Upload className="w-5 h-5" />
+            Upload Bank Statement
+          </Button>
+          <Button onClick={() => setShowModal(true)} className="gap-2">
+            <Plus className="w-5 h-5" />
+            Add Memberships
+          </Button>
+        </div>
       </div>
 
       {/* Search and Filters */}
@@ -1459,6 +1521,166 @@ export default function Memberships() {
               : `Add ${selectedMemberships.length} Selected`}
           </Button>
         </DialogFooter>
+      </Dialog>
+
+      {/* Bank Statement Upload Dialog */}
+      <Dialog open={showBankStatementUpload} onOpenChange={setShowBankStatementUpload}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              Upload Bank Statement
+            </DialogTitle>
+            <DialogDescription>
+              Upload your bank statement PDF to automatically detect and add recurring subscriptions
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {!uploadResult && (
+              <div 
+                className="border-2 border-dashed border-zinc-300 dark:border-zinc-700 rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors"
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onClick={() => !uploadingStatement && fileInputRef.current?.click()}
+              >
+                <Upload className="w-12 h-12 text-zinc-400 mx-auto mb-4" />
+                <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+                  Drag and drop your bank statement PDF here, or click to browse
+                </p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      handleBankStatementUpload(file);
+                    }
+                  }}
+                  className="hidden"
+                  disabled={uploadingStatement}
+                />
+                <Button
+                  variant="outline"
+                  disabled={uploadingStatement}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    fileInputRef.current?.click();
+                  }}
+                  className="cursor-pointer"
+                >
+                  {uploadingStatement ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Choose PDF File
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+
+            {uploadError && (
+              <Alert variant="destructive">
+                <AlertCircle className="w-4 h-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{uploadError}</AlertDescription>
+              </Alert>
+            )}
+
+            {uploadResult && (
+              <div className="space-y-4">
+                <Alert>
+                  <CheckCircle className="w-4 h-4" />
+                  <AlertTitle>Success!</AlertTitle>
+                  <AlertDescription>{uploadResult.message}</AlertDescription>
+                </Alert>
+
+                <div className="bg-zinc-50 dark:bg-zinc-900 rounded-lg p-4 space-y-2">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-zinc-500 dark:text-zinc-400">Subscriptions Found:</span>
+                      <span className="ml-2 font-semibold">{uploadResult.subscriptions_found}</span>
+                    </div>
+                    <div>
+                      <span className="text-zinc-500 dark:text-zinc-400">Added to Account:</span>
+                      <span className="ml-2 font-semibold text-green-600 dark:text-green-400">
+                        {uploadResult.subscriptions_processed}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-zinc-500 dark:text-zinc-400">Monthly Cost:</span>
+                      <span className="ml-2 font-semibold">
+                        £{uploadResult.summary.monthly_subscription_cost.toFixed(2)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-zinc-500 dark:text-zinc-400">Annual Cost:</span>
+                      <span className="ml-2 font-semibold">
+                        £{uploadResult.summary.annual_subscription_cost.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {uploadResult.processed.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-sm">Added Memberships:</h4>
+                    <div className="space-y-1 max-h-48 overflow-y-auto">
+                      {uploadResult.processed.map((item: any, index: number) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between p-2 bg-white dark:bg-zinc-800 rounded text-sm"
+                        >
+                          <span className="font-medium">{item.membership_name}</span>
+                          <Badge variant={item.action === 'already_exists' ? 'secondary' : 'default'}>
+                            {item.action === 'already_exists' ? 'Already had' : 
+                             item.action === 'linked_existing' ? 'Linked' : 
+                             item.action === 'created_new' ? 'Created' : 'Added'}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {uploadResult.errors.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-sm text-red-600 dark:text-red-400">Errors:</h4>
+                    <div className="space-y-1">
+                      {uploadResult.errors.map((error: any, index: number) => (
+                        <div key={index} className="text-sm text-red-600 dark:text-red-400 p-2 bg-red-50 dark:bg-red-900/20 rounded">
+                          {error.subscription}: {error.error}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            {uploadResult ? (
+              <Button onClick={() => {
+                setShowBankStatementUpload(false);
+                setUploadResult(null);
+                setUploadError(null);
+              }}>
+                Done
+              </Button>
+            ) : (
+              <DialogClose asChild>
+                <Button variant="outline">Cancel</Button>
+              </DialogClose>
+            )}
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
     </div>
   );

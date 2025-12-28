@@ -18,6 +18,7 @@ from app.api import (
     chat,
     analytics,
     dev_admin,
+    bank_statement,
 )
 
 api_router = APIRouter()
@@ -42,6 +43,9 @@ api_router.include_router(benefits.router)
 api_router.include_router(ai.router)
 api_router.include_router(chat.router)
 api_router.include_router(analytics.router)
+
+# Bank Statement Processing
+api_router.include_router(bank_statement.router)
 
 # Development utilities (TODO: Remove in production)
 api_router.include_router(dev_admin.router)

@@ -53,7 +53,14 @@ export interface Recommendation {
   membership_slug?: string;
   benefit_id?: number;
   benefit_match_ids?: number[];
-  kind?: "overlap" | "unused" | "switch" | "bundle" | "tip" | "add_membership" | "upgrade";
+  kind?:
+    | "overlap"
+    | "unused"
+    | "switch"
+    | "bundle"
+    | "tip"
+    | "add_membership"
+    | "upgrade";
 }
 
 export interface CheckResponse {
@@ -411,6 +418,70 @@ class ApiClient {
       method: "PATCH",
       body: data ? JSON.stringify(data) : undefined,
     });
+  }
+
+  // File upload method
+  async uploadFile<T = any>(endpoint: string, file: File): Promise<T> {
+    const url = `${this.baseUrl}${endpoint}`;
+
+    // Get auth token
+    const authData = localStorage.getItem("vogoplus-auth");
+    const accessToken = authData
+      ? JSON.parse(authData).state?.accessToken
+      : null;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
+      },
+      body: formData,
+    });
+
+    // Handle 401 Unauthorized
+    if (response.status === 401 && accessToken) {
+      const refreshed = await this.refreshToken();
+      if (refreshed) {
+        return this.uploadFile(endpoint, file);
+      } else {
+        window.location.href = "/login";
+        throw new Error("Session expired");
+      }
+    }
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.detail || `Upload failed: ${response.statusText}`
+      );
+    }
+
+    return response.json();
+  }
+
+  // Bank statement upload
+  async uploadBankStatement(file: File): Promise<{
+    summary: {
+      total_transactions: number;
+      subscriptions_found: number;
+      monthly_subscription_cost: number;
+      annual_subscription_cost: number;
+    };
+    subscriptions_found: number;
+    subscriptions_processed: number;
+    processed: Array<{
+      membership_id: number;
+      membership_name: string;
+      action: string;
+      amount: number;
+    }>;
+    errors: Array<{ subscription: string; error: string }>;
+    message: string;
+  }> {
+    return this.uploadFile("/api/bank-statement/upload", file);
   }
 }
 
