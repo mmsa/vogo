@@ -252,14 +252,9 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
     }
   } catch (e) {
     console.error("Error fetching recommendations:", e);
-    const isLocalhost = apiBase.includes("localhost") || apiBase.includes("127.0.0.1");
-    const errorMessage = isLocalhost
-      ? `Could not reach the server at ${apiBase}. Make sure the backend is running.`
-      : `Could not reach the server at ${apiBase}. Please check your internet connection or try again later.`;
     content.innerHTML = `
       <div style="color:#dc2626;font-weight:600">❌ Connection Error</div>
-      <div style="font-size:13px;color:#666;margin-top:8px">${errorMessage}</div>
-      ${isLocalhost ? `<div style="font-size:12px;color:#666;margin-top:8px;padding:8px;background:#fef3c7;border-radius:6px">💡 For local development, ensure the backend is running and accessible at ${apiBase}</div>` : ''}
+      <div style="font-size:13px;color:#666;margin-top:8px">Could not reach the server. Make sure the backend is running on port 8000.</div>
     `;
   }
 });

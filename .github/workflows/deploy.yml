@@ -65,47 +65,6 @@ jobs:
           cd web
           npm run lint || true
 
-  build_extension:
-    runs-on: ubuntu-latest
-    name: Build Extension
-    steps:
-      - uses: actions/checkout@v4
-        with: { fetch-depth: 1 }
-
-      - uses: actions/setup-node@v4
-        with: { node-version: '20' }
-
-      - name: Install dependencies
-        run: |
-          cd webext
-          npm ci
-
-      - name: Build extension
-        run: |
-          cd webext
-          npm run build
-          # Move HTML files to correct locations
-          mv dist/src/popup/index.html dist/popup/ 2>/dev/null || true
-          mv dist/src/options/index.html dist/options/ 2>/dev/null || true
-          # Remove src folder
-          rm -rf dist/src
-          # Copy manifest
-          cp manifest.json dist/
-
-      - name: Create extension zip
-        run: |
-          cd webext
-          npm run zip
-
-      - name: Upload extension artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: vogoplus-extension
-          path: |
-            webext/dist/**
-            webext/vogoplus-app_ext.zip
-          retention-days: 30
-
   security_scan:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -128,7 +87,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     name: Build Docker Images
-    needs: [test, lint, build_extension]
+    needs: [test, lint]
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 1 }

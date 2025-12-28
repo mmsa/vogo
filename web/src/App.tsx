@@ -10,6 +10,7 @@ import Memberships from "./pages/Memberships";
 import MembershipBenefits from "./pages/MembershipBenefits";
 import Benefits from "./pages/Benefits";
 import Recommendations from "./pages/Recommendations";
+import MyPerks from "./pages/MyPerks";
 import Admin from "./pages/Admin";
 import DebugInfo from "./pages/DebugInfo";
 import Login from "./pages/auth/Login";
@@ -64,6 +65,7 @@ function App() {
               <Route path="/memberships/:id" element={<MembershipBenefits />} />
               <Route path="/benefits" element={<Benefits />} />
               <Route path="/recommendations" element={<Recommendations />} />
+              <Route path="/my-perks" element={<MyPerks />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/debug" element={<DebugInfo />} />
               <Route path="*" element={<Navigate to="/" replace />} />
