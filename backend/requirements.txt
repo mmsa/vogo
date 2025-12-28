@@ -27,3 +27,7 @@ python-jose[cryptography]==3.3.0
 email-validator==2.1.0
 PyJWT==2.8.0
 
+# PDF parsing for bank statements
+pdfplumber==0.10.3
+python-multipart==0.0.6
+
