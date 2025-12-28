@@ -18,7 +18,7 @@ import Register from "./pages/auth/Register";
 import Privacy from "./pages/Privacy";
 
 function App() {
-  const { loadUser, isAuthenticated } = useAuth();
+  const { loadUser, isAuthenticated, user } = useAuth();
   const location = useLocation();
 
   // Load user on app start if we have a token
@@ -36,6 +36,71 @@ function App() {
       loadUser();
     }
   }, []);
+
+  // Listen for storage changes from other tabs (multi-tab support)
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      // Watch for changes to the auth storage key
+      if (e.key === "vogoplus-auth") {
+        const newAuthData = e.newValue;
+        const oldAuthData = e.oldValue;
+
+        // Parse auth data to check user ID
+        let newUserId: number | null = null;
+        let oldUserId: number | null = null;
+
+        try {
+          if (newAuthData) {
+            const parsed = JSON.parse(newAuthData);
+            newUserId = parsed.state?.user?.id || null;
+          }
+          if (oldAuthData) {
+            const parsed = JSON.parse(oldAuthData);
+            oldUserId = parsed.state?.user?.id || null;
+          }
+        } catch (e) {
+          // Ignore parse errors
+        }
+
+        // If user logged out (newUserId is null but oldUserId wasn't)
+        // OR if user changed (newUserId !== oldUserId and both are not null)
+        if (
+          (!newUserId && oldUserId) ||
+          (newUserId && oldUserId && newUserId !== oldUserId)
+        ) {
+          // Clear user-specific caches when user logs out or changes in another tab
+          localStorage.removeItem("vogo_cache_ai");
+          localStorage.removeItem("vogo_cache_rule");
+        }
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+    };
+  }, []);
+
+  // Also watch for user changes in the current tab and clear cache if user ID changes
+  useEffect(() => {
+    const cachedAI = localStorage.getItem("vogo_cache_ai");
+    if (cachedAI && user?.id) {
+      try {
+        const cached = JSON.parse(cachedAI);
+        // If cache exists but belongs to a different user, clear it
+        if (cached.userId && cached.userId !== user.id) {
+          localStorage.removeItem("vogo_cache_ai");
+          localStorage.removeItem("vogo_cache_rule");
+        }
+      } catch (e) {
+        // Ignore parse errors
+      }
+    } else if (!user?.id && cachedAI) {
+      // User logged out, clear cache
+      localStorage.removeItem("vogo_cache_ai");
+      localStorage.removeItem("vogo_cache_rule");
+    }
+  }, [user?.id]);
 
   // Auth routes (public)
   if (

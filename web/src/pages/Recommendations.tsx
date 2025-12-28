@@ -44,15 +44,21 @@ export default function Recommendations() {
         if (cachedAI) {
           try {
             const cached = JSON.parse(cachedAI);
-            // Filter cached recommendations (in case cache was from before filtering)
-            const filteredCached = cached.recs.filter(
-              (rec: Recommendation) => rec.kind === "overlap" || rec.kind === "tip" || rec.kind === "add_membership" || rec.kind === "upgrade"
-            );
-            setRecommendations(filteredCached);
-            setRelevantBenefits(cached.benefits);
-            setLoading(false);
-            // Don't refresh in background - only refresh when cache is cleared (memberships changed)
-            return;
+            // Verify cache belongs to current user (safety check)
+            if (cached.userId && cached.userId !== user.id) {
+              // Cache is from a different user, ignore it
+              localStorage.removeItem("vogo_cache_ai");
+            } else {
+              // Filter cached recommendations (in case cache was from before filtering)
+              const filteredCached = cached.recs.filter(
+                (rec: Recommendation) => rec.kind === "overlap" || rec.kind === "tip" || rec.kind === "add_membership" || rec.kind === "upgrade"
+              );
+              setRecommendations(filteredCached);
+              setRelevantBenefits(cached.benefits);
+              setLoading(false);
+              // Don't refresh in background - only refresh when cache is cleared (memberships changed)
+              return;
+            }
           } catch (e) {
             // Cache parse failed, continue to load fresh
             console.error("Cache parse error:", e);
@@ -72,6 +78,7 @@ export default function Recommendations() {
         setRecommendations(filteredRecs);
         setRelevantBenefits(data.relevant_benefits || []);
         const aiCache = {
+          userId: user.id, // Store user ID to verify cache belongs to current user
           recs: filteredRecs,
           benefits: data.relevant_benefits || [],
         };
