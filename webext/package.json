@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "zip": "cd dist && zip -r ../vogoplus-app_ext.zip ."
+    "zip": "cd dist && zip -r ../vogoplus-app_ext.zip . -x '*.DS_Store' '*.git*'",
+    "package": "npm run build && ./build.sh && npm run zip",
+    "publish:prepare": "npm run package && echo '✅ Extension packaged! Ready to upload: vogoplus-app_ext.zip'"
   },
   "devDependencies": {
     "vite": "^5",

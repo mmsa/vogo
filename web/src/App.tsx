@@ -15,6 +15,7 @@ import Admin from "./pages/Admin";
 import DebugInfo from "./pages/DebugInfo";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
+import Privacy from "./pages/Privacy";
 
 function App() {
   const { loadUser, isAuthenticated } = useAuth();
@@ -23,30 +24,39 @@ function App() {
   // Load user on app start if we have a token
   useEffect(() => {
     // Migrate from old key if needed
-    const oldAuthData = localStorage.getItem('vogplus-auth');
+    const oldAuthData = localStorage.getItem("vogplus-auth");
     if (oldAuthData) {
-      localStorage.setItem('vogoplus-auth', oldAuthData);
-      localStorage.removeItem('vogplus-auth');
+      localStorage.setItem("vogoplus-auth", oldAuthData);
+      localStorage.removeItem("vogplus-auth");
     }
-    const authData = localStorage.getItem('vogoplus-auth');
+    const authData = localStorage.getItem("vogoplus-auth");
     const hasToken = authData ? JSON.parse(authData).state?.accessToken : null;
-    
+
     if (hasToken && !isAuthenticated) {
       loadUser();
     }
   }, []);
 
   // Auth routes (public)
-  if (location.pathname === '/login' || location.pathname === '/register') {
+  if (
+    location.pathname === "/login" ||
+    location.pathname === "/register" ||
+    location.pathname === "/privacy"
+  ) {
     return (
       <ThemeProvider>
         <Routes>
-          <Route path="/login" element={
-            isAuthenticated ? <Navigate to="/" replace /> : <Login />
-          } />
-          <Route path="/register" element={
-            isAuthenticated ? <Navigate to="/" replace /> : <Register />
-          } />
+          <Route
+            path="/login"
+            element={isAuthenticated ? <Navigate to="/" replace /> : <Login />}
+          />
+          <Route
+            path="/register"
+            element={
+              isAuthenticated ? <Navigate to="/" replace /> : <Register />
+            }
+          />
+          <Route path="/privacy" element={<Privacy />} />
         </Routes>
       </ThemeProvider>
     );
