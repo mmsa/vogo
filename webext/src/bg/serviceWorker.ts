@@ -3,6 +3,100 @@ import { gs, ss } from "../lib/storage";
 const CACHE = "domainCache";
 const LAST_RECS = "lastRecs";
 
+// Debounce helper to avoid spamming API calls
+let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+const DEBOUNCE_MS = 500;
+
+// Track last processed URL to avoid duplicate checks
+let lastProcessedUrl: string | null = null;
+
+// Check if URL should be ignored (system pages)
+function shouldIgnoreUrl(url: string): boolean {
+  if (!url) return true;
+  const protocol = new URL(url).protocol;
+  return (
+    protocol === "chrome:" ||
+    protocol === "chrome-extension:" ||
+    protocol === "moz-extension:" ||
+    protocol === "edge:" ||
+    protocol === "about:" ||
+    protocol === "file:"
+  );
+}
+
+// Process tab URL automatically
+async function processTabUrl(tabId: number, url: string) {
+  // Ignore system URLs
+  if (shouldIgnoreUrl(url)) {
+    console.log("🔧 Ignoring system URL:", url);
+    return;
+  }
+
+  // Skip if same URL was just processed
+  if (url === lastProcessedUrl) {
+    return;
+  }
+
+  try {
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname;
+    const isCheckout = /checkout|cart|payment|subscribe|plan/i.test(url);
+
+    console.log("🔧 Auto-detecting URL:", hostname);
+
+    // Call existing handler
+    await handlePageContext(
+      {
+        hostname,
+        url,
+        isCheckout,
+      },
+      tabId
+    );
+
+    lastProcessedUrl = url;
+  } catch (e) {
+    console.error("Error processing tab URL:", e);
+  }
+}
+
+// Automatic tab detection - listen for tab updates
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  // Only process when page finishes loading
+  if (changeInfo.status !== "complete" || !tab.url) {
+    return;
+  }
+
+  // Debounce to avoid spamming
+  if (debounceTimer) {
+    clearTimeout(debounceTimer);
+  }
+
+  debounceTimer = setTimeout(() => {
+    processTabUrl(tabId, tab.url!);
+  }, DEBOUNCE_MS);
+});
+
+// Listen for tab activation (switching tabs)
+chrome.tabs.onActivated.addListener(async (activeInfo) => {
+  try {
+    const tab = await chrome.tabs.get(activeInfo.tabId);
+    if (tab.url) {
+      // Debounce to avoid spamming
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
+      }
+
+      debounceTimer = setTimeout(() => {
+        processTabUrl(activeInfo.tabId, tab.url!);
+      }, DEBOUNCE_MS);
+    }
+  } catch (e) {
+    // Tab might not be accessible (e.g., chrome:// pages)
+    console.log("Could not access tab:", e);
+  }
+});
+
 // Handle messages from content script
 chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
   if (msg?.type === "PAGE_CONTEXT") {
@@ -44,15 +138,35 @@ async function handlePageContext(msg: any, tabId?: number) {
     console.log("  ✅ Using cached data");
     await ss(LAST_RECS, { hostname, data: cached.data, error: null }, "local");
     notifyPopup();
-    
+
     // Show badge if cached data has matches (like Honey)
     if (cached.data?.recommendations?.length > 0 && tabId) {
       try {
-        chrome.tabs.sendMessage(tabId, {
-          type: "SHOW_BADGE",
-          message: cached.data.recommendations[0]?.title || "You have benefits available on this site!",
-          benefitCount: cached.data.relevant_benefits?.length || 0,
-        }).catch(() => {});
+        // Inject content script if needed
+        await chrome.scripting
+          .executeScript({
+            target: { tabId },
+            files: ["content/detector.js"],
+          })
+          .catch(() => {});
+
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        chrome.tabs
+          .sendMessage(tabId, {
+            type: "SHOW_BADGE",
+            message:
+              cached.data.recommendations[0]?.title ||
+              "You have benefits available on this site!",
+            benefitCount: cached.data.relevant_benefits?.length || 0,
+          })
+          .catch(() => {});
+
+        chrome.action.setBadgeText({
+          text: "✓",
+          tabId,
+        });
+        chrome.action.setBadgeBackgroundColor({ color: "#10b981" });
       } catch (e) {
         // Ignore errors
       }
@@ -65,8 +179,11 @@ async function handlePageContext(msg: any, tabId?: number) {
   const token = await gs<string>("accessToken");
 
   console.log("  📡 Fetching fresh data from", apiBase);
-  console.log("  🔑 Token:", token ? `present (${token.substring(0, 20)}...)` : "MISSING");
-  
+  console.log(
+    "  🔑 Token:",
+    token ? `present (${token.substring(0, 20)}...)` : "MISSING"
+  );
+
   // DEBUG: Check all storage
   const allSync = await chrome.storage.sync.get(null);
   console.log("  🗄️  All sync storage keys:", Object.keys(allSync));
@@ -139,26 +256,53 @@ async function handlePageContext(msg: any, tabId?: number) {
     console.log("  💾 Stored in LAST_RECS");
     notifyPopup();
 
-    // Automatically show floating badge if benefits found (like Honey)
+    // Automatically inject content script and show badge if benefits found
     if (data.has_matches && tabId) {
       try {
-        chrome.tabs.sendMessage(tabId, {
-          type: "SHOW_BADGE",
-          message: data.message || "You have benefits available on this site!",
-          benefitCount: data.highlight_benefit_ids?.length || 0,
-        }).catch((e) => {
-          // Content script might not be ready, that's okay
-          console.log("Could not send badge message:", e);
+        // Inject content script first (if not already injected)
+        await chrome.scripting
+          .executeScript({
+            target: { tabId },
+            files: ["content/detector.js"],
+          })
+          .catch(() => {
+            // Script might already be injected, that's okay
+          });
+
+        // Small delay to ensure script is ready
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        // Send badge message
+        chrome.tabs
+          .sendMessage(tabId, {
+            type: "SHOW_BADGE",
+            message:
+              data.message || "You have benefits available on this site!",
+            benefitCount: data.highlight_benefit_ids?.length || 0,
+          })
+          .catch((e) => {
+            // Content script might not be ready, that's okay
+            console.log("Could not send badge message:", e);
+          });
+
+        // Update badge icon
+        chrome.action.setBadgeText({
+          text: "✓",
+          tabId,
         });
+        chrome.action.setBadgeBackgroundColor({ color: "#10b981" });
       } catch (e) {
         console.log("Could not show badge:", e);
       }
     } else if (!data.has_matches && tabId) {
       // Hide badge if no matches
       try {
-        chrome.tabs.sendMessage(tabId, {
-          type: "HIDE_BADGE",
-        }).catch(() => {});
+        chrome.tabs
+          .sendMessage(tabId, {
+            type: "HIDE_BADGE",
+          })
+          .catch(() => {});
+        chrome.action.setBadgeText({ text: "", tabId });
       } catch (e) {
         // Ignore errors
       }
