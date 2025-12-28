@@ -15,6 +15,7 @@ import Admin from "./pages/Admin";
 import DebugInfo from "./pages/DebugInfo";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
+import Privacy from "./pages/Privacy";
 
 function App() {
   const { loadUser, isAuthenticated } = useAuth();
@@ -37,7 +38,7 @@ function App() {
   }, []);
 
   // Auth routes (public)
-  if (location.pathname === '/login' || location.pathname === '/register') {
+  if (location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/privacy') {
     return (
       <ThemeProvider>
         <Routes>
@@ -47,6 +48,7 @@ function App() {
           <Route path="/register" element={
             isAuthenticated ? <Navigate to="/" replace /> : <Register />
           } />
+          <Route path="/privacy" element={<Privacy />} />
         </Routes>
       </ThemeProvider>
     );
