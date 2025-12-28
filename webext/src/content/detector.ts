@@ -117,29 +117,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 });
 
-const send = () => {
-  // Skip localhost and extension pages
-  if (
-    location.hostname === "localhost" ||
-    location.protocol === "chrome-extension:"
-  ) {
-    return;
-  }
-
-  chrome.runtime.sendMessage({
-    type: "PAGE_CONTEXT",
-    hostname: location.hostname,
-    url: location.href,
-    isCheckout: /checkout|cart|payment|subscribe|plan/i.test(location.href),
-  });
-};
-
-// Wait for DOM to be ready before sending
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", send);
-} else {
-  send();
-}
-
-addEventListener("popstate", send);
-addEventListener("hashchange", send);
+// Content script is now only injected when popup opens (activeTab permission)
+// It no longer automatically sends PAGE_CONTEXT messages
+// The popup handles benefit checking directly via API calls
