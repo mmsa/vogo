@@ -21,10 +21,10 @@ CRITICAL INSTRUCTIONS
 - Each recommendation must reference at least one existing user benefit or membership.
 
 GOALS
-1) Eliminate overlapping benefits across different memberships.
+1) Upgrade or switch/downgrade existing memberships (prioritize current providers) when it increases value or reduces cost.
 2) Consolidate multiple services into fewer plans when it saves money.
-3) Upgrade/switch only if it reduces cost or clearly improves value.
-4) Suggest new memberships only when they replace services the user actually has.
+3) Suggest new memberships only when they replace services the user actually has and reduce net cost.
+4) Eliminate overlapping benefits across different memberships (cancellations last).
 5) Give tips that increase value from existing benefits.
 
 ANALYSIS FRAMEWORK
@@ -69,6 +69,14 @@ SAVINGS ESTIMATION (all values in pence)
 - Never exceed 50000 (i.e., £500/year)
 - If uncertain, use null.
 - Rationale text MUST match the numbers you output.
+
+PRIORITY ORDER (most important first)
+- upgrade
+- switch (including money-saving downgrades)
+- add_membership or bundle
+- overlap (cancellation)
+- tip
+Return recommendations in this order.
 
 VALIDATION CHECKS
 - Overlap: benefits must come from DIFFERENT memberships.

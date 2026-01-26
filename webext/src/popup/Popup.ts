@@ -20,6 +20,36 @@ root.innerHTML = `
 
 const content = document.getElementById("content")!;
 const subtitle = document.getElementById("subtitle")!;
+const signedInFooter = `
+  <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#6b7280">
+    <span>Signed in via extension</span>
+    <button id="signOutBtn" style="background:transparent;border:none;color:#ef4444;font-weight:600;cursor:pointer;padding:0">Sign out</button>
+  </div>
+`;
+
+const attachSignOutHandler = async () => {
+  const signOutBtn = document.getElementById("signOutBtn") as
+    | HTMLButtonElement
+    | null;
+  if (!signOutBtn) return;
+  signOutBtn.onclick = async () => {
+    await chrome.storage.sync.remove("accessToken");
+    await chrome.storage.local.remove(["domainCache", "lastRecs"]);
+    try {
+      const [tab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true,
+      });
+      if (tab?.id) {
+        chrome.tabs.sendMessage(tab.id, { type: "HIDE_BADGE" }).catch(() => {});
+        chrome.action.setBadgeText({ text: "", tabId: tab.id });
+      }
+    } catch {
+      // Ignore tab access errors
+    }
+    location.reload();
+  };
+};
 
 // Get current tab
 chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
@@ -206,6 +236,7 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
           <button id="openAppBtn" style="background:#667eea;color:white;border:none;padding:12px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;width:100%;margin-top:8px;transition:all 0.2s;box-shadow:0 2px 6px rgba(102,126,234,0.3)">
             🚀 View Full Dashboard
           </button>
+          ${signedInFooter}
         </div>
       `;
 
@@ -214,6 +245,7 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
         openBtn.onclick = () =>
           chrome.tabs.create({ url: "https://app.vogoplus.app" });
       }
+      await attachSignOutHandler();
       return;
     }
   }
@@ -240,7 +272,9 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
       content.innerHTML = `
         <div style="color:#dc2626;font-weight:600">❌ API Error</div>
         <div style="font-size:13px;color:#666;margin-top:8px">Status: ${response.status}</div>
+        ${signedInFooter}
       `;
+      await attachSignOutHandler();
       return;
     }
 
@@ -280,7 +314,9 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
         <p style="font-size:13px;color:#666;line-height:1.5">${
           data.message || "We couldn't find any benefits matching this site."
         }<br><br>Try <strong>amazon.co.uk</strong>, <strong>booking.com</strong>, or other sites where you have perks!</p>
+        ${signedInFooter}
       `;
+      await attachSignOutHandler();
       return;
     }
 
@@ -328,6 +364,7 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
         <button id="openAppBtn" style="background:#667eea;color:white;border:none;padding:12px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;width:100%;margin-top:8px;transition:all 0.2s;box-shadow:0 2px 6px rgba(102,126,234,0.3)">
           🚀 View Full Dashboard
         </button>
+        ${signedInFooter}
       </div>
     `;
 
@@ -337,11 +374,14 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
       openBtn.onclick = () =>
         chrome.tabs.create({ url: "https://app.vogoplus.app" });
     }
+    await attachSignOutHandler();
   } catch (e) {
     console.error("Error fetching recommendations:", e);
     content.innerHTML = `
       <div style="color:#dc2626;font-weight:600">❌ Connection Error</div>
       <div style="font-size:13px;color:#666;margin-top:8px">Could not reach the server. Make sure the backend is running on port 8000.</div>
+      ${signedInFooter}
     `;
+    await attachSignOutHandler();
   }
 });
