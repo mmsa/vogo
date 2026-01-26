@@ -84,7 +84,7 @@ async def find_semantic_matches(
     page_metadata: Dict[str, str],
     user_benefits: List[Tuple[Benefit, Membership]],
     top_k: int = 5,
-    threshold: float = 0.6,
+    threshold: float = 0.7,
 ) -> List[Dict[str, Any]]:
     """
     Find benefits that semantically match the current page.

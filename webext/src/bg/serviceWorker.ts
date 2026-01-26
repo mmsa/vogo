@@ -1,4 +1,4 @@
-import { gs, ss } from "../lib/storage";
+import { gs, ss, rm } from "../lib/storage";
 
 const CACHE = "domainCache";
 const LAST_RECS = "lastRecs";
@@ -218,6 +218,11 @@ async function handlePageContext(msg: any, tabId?: number) {
     console.log("  📥 Response status:", r.status);
 
     if (!r.ok) {
+      if (r.status === 401) {
+        await rm("accessToken");
+        await rm(CACHE, "local");
+        await rm(LAST_RECS, "local");
+      }
       throw new Error(
         r.status === 401 ? "Authentication failed" : `HTTP ${r.status}`
       );

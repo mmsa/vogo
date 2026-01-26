@@ -16,6 +16,33 @@ export default function Recommendations() {
   const [loading, setLoading] = useState(true);
   const [hasMemberships, setHasMemberships] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const allowedKinds = new Set([
+    "upgrade",
+    "switch",
+    "add_membership",
+    "bundle",
+    "overlap",
+    "tip",
+  ]);
+  const kindPriority: Record<string, number> = {
+    upgrade: 0,
+    switch: 1,
+    add_membership: 2,
+    bundle: 3,
+    overlap: 4,
+    tip: 5,
+    unused: 6,
+  };
+
+  const sortRecommendations = (recs: Recommendation[]) =>
+    [...recs].sort((a, b) => {
+      const aPriority = kindPriority[a.kind || ""] ?? 99;
+      const bPriority = kindPriority[b.kind || ""] ?? 99;
+      if (aPriority !== bPriority) return aPriority - bPriority;
+      const aSaving = a.estimated_saving_max ?? a.estimated_saving_min ?? 0;
+      const bSaving = b.estimated_saving_max ?? b.estimated_saving_min ?? 0;
+      return bSaving - aSaving;
+    });
 
   useEffect(() => {
     if (user?.id) {
@@ -50,10 +77,10 @@ export default function Recommendations() {
               localStorage.removeItem("vogo_cache_ai");
             } else {
               // Filter cached recommendations (in case cache was from before filtering)
-              const filteredCached = cached.recs.filter(
-                (rec: Recommendation) => rec.kind === "overlap" || rec.kind === "tip" || rec.kind === "add_membership" || rec.kind === "upgrade"
+              const filteredCached = cached.recs.filter((rec: Recommendation) =>
+                rec.kind ? allowedKinds.has(rec.kind) : false
               );
-              setRecommendations(filteredCached);
+              setRecommendations(sortRecommendations(filteredCached));
               setRelevantBenefits(cached.benefits);
               setLoading(false);
               // Don't refresh in background - only refresh when cache is cleared (memberships changed)
@@ -73,13 +100,14 @@ export default function Recommendations() {
         });
         // Filter out "unused" recommendations - show overlaps, tips, and optimization recommendations
         const filteredRecs = (data.recommendations || []).filter(
-          (rec: Recommendation) => rec.kind === "overlap" || rec.kind === "tip" || rec.kind === "add_membership" || rec.kind === "upgrade"
+          (rec: Recommendation) => (rec.kind ? allowedKinds.has(rec.kind) : false)
         );
-        setRecommendations(filteredRecs);
+        const sortedRecs = sortRecommendations(filteredRecs);
+        setRecommendations(sortedRecs);
         setRelevantBenefits(data.relevant_benefits || []);
         const aiCache = {
           userId: user.id, // Store user ID to verify cache belongs to current user
-          recs: filteredRecs,
+          recs: sortedRecs,
           benefits: data.relevant_benefits || [],
         };
         // Persist to localStorage

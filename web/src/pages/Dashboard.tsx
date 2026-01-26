@@ -16,6 +16,33 @@ export default function Dashboard() {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const allowedKinds = new Set([
+    "upgrade",
+    "switch",
+    "add_membership",
+    "bundle",
+    "overlap",
+    "tip",
+  ]);
+  const kindPriority: Record<string, number> = {
+    upgrade: 0,
+    switch: 1,
+    add_membership: 2,
+    bundle: 3,
+    overlap: 4,
+    tip: 5,
+    unused: 6,
+  };
+
+  const sortRecommendations = (recs: Recommendation[]) =>
+    [...recs].sort((a, b) => {
+      const aPriority = kindPriority[a.kind || ""] ?? 99;
+      const bPriority = kindPriority[b.kind || ""] ?? 99;
+      if (aPriority !== bPriority) return aPriority - bPriority;
+      const aSaving = a.estimated_saving_max ?? a.estimated_saving_min ?? 0;
+      const bSaving = b.estimated_saving_max ?? b.estimated_saving_min ?? 0;
+      return bSaving - aSaving;
+    });
 
   useEffect(() => {
     if (user?.id) {
@@ -44,14 +71,14 @@ export default function Dashboard() {
             // Cache is from a different user, ignore it
             localStorage.removeItem("vogo_cache_ai");
           } else {
-            const filteredCached = cached.recs.filter(
-              (rec: Recommendation) => rec.kind === "overlap" || rec.kind === "tip" || rec.kind === "add_membership" || rec.kind === "upgrade"
+            const filteredCached = cached.recs.filter((rec: Recommendation) =>
+              rec.kind ? allowedKinds.has(rec.kind) : false
             );
             // Deduplicate by title to avoid duplicates
-            const uniqueCached = filteredCached.filter((rec: Recommendation, index: number, self: Recommendation[]) => 
+            const uniqueCached = filteredCached.filter((rec: Recommendation, index: number, self: Recommendation[]) =>
               index === self.findIndex((r) => r.title === rec.title && r.kind === rec.kind)
             );
-            setRecommendations(uniqueCached);
+            setRecommendations(sortRecommendations(uniqueCached));
             setLoading(false);
             // Don't refresh in background - only refresh when cache is cleared (memberships changed)
             return;
@@ -64,11 +91,14 @@ export default function Dashboard() {
       
       // Load fresh recommendations (only if no cache)
       const recsData = await api.getLLMRecommendations({ user_id: user.id }).then(data => {
-        const filtered = data.recommendations.filter((rec: Recommendation) => rec.kind === "overlap" || rec.kind === "tip");
+        const filtered = data.recommendations.filter((rec: Recommendation) =>
+          rec.kind ? allowedKinds.has(rec.kind) : false
+        );
         // Deduplicate by title to avoid duplicates
-        return filtered.filter((rec: Recommendation, index: number, self: Recommendation[]) => 
+        const unique = filtered.filter((rec: Recommendation, index: number, self: Recommendation[]) =>
           index === self.findIndex((r) => r.title === rec.title && r.kind === rec.kind)
         );
+        return sortRecommendations(unique);
       });
       setRecommendations(recsData);
     } catch (error) {
@@ -83,14 +113,10 @@ export default function Dashboard() {
   const membershipCount = uniqueMemberships.size;
 
   // Calculate potential savings (convert from pence to pounds)
-  // Recommendations are already filtered for overlap/tip and deduplicated when loaded
+  // Recommendations are already filtered and deduplicated when loaded
   const potentialSavings = recommendations.reduce((total, rec) => {
-    // Double-check kind filter (should already be filtered, but be safe)
-    if ((rec.kind === "overlap" || rec.kind === "tip") && rec.estimated_saving_min) {
-      // estimated_saving_min is in pence, convert to pounds
-      return total + (rec.estimated_saving_min / 100);
-    }
-    return total;
+    const minSaving = rec.estimated_saving_min ?? 0;
+    return total + (minSaving > 0 ? minSaving / 100 : 0);
   }, 0);
 
   // Get user's first name
