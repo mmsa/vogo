@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "vogoplus.app",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Intelligence for your benefits. Discover, manage, and optimize your membership perks.",
   "icons": {
     "16": "logo.png",
