@@ -293,24 +293,17 @@ class ApiClient {
     userId: number,
     membershipId: number
   ): Promise<void> {
-    const response = await fetch(
-      `${this.baseUrl}/api/user-memberships/${userId}/${membershipId}`,
+    await this.request<void>(
+      `/api/user-memberships/${userId}/${membershipId}`,
       {
         method: "DELETE",
       }
     );
-
-    if (!response.ok) {
-      throw new Error(`API error: ${response.statusText}`);
-    }
   }
 
   // Recommendations
-  async getRecommendations(
-    userId: number,
-    domain?: string
-  ): Promise<Recommendation[]> {
-    const params = new URLSearchParams({ user_id: userId.toString() });
+  async getRecommendations(domain?: string): Promise<Recommendation[]> {
+    const params = new URLSearchParams();
     if (domain) {
       params.append("domain", domain);
     }
@@ -318,11 +311,8 @@ class ApiClient {
   }
 
   // Check
-  async checkBenefits(vendor: string, userId: number): Promise<CheckResponse> {
-    const params = new URLSearchParams({
-      vendor,
-      user_id: userId.toString(),
-    });
+  async checkBenefits(vendor: string): Promise<CheckResponse> {
+    const params = new URLSearchParams({ vendor });
     return this.request<CheckResponse>(`/api/check?${params}`);
   }
 

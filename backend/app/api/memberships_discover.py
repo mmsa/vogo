@@ -1,10 +1,12 @@
 """Smart Add / Discovery API endpoints for memberships."""
 from typing import List, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
+from app.core.auth import get_current_user, require_admin
+from app.models import User
 from app.models import Membership, Benefit
 from app.services.ingest_unknown import ingest_unknown_membership
 
@@ -66,7 +68,8 @@ class PendingMembershipOut(BaseModel):
 @router.post("/discover", response_model=DiscoverResponse)
 def discover_membership(
     request: DiscoverRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Smart Add: Discover an unknown membership.
@@ -74,9 +77,15 @@ def discover_membership(
     Searches the web, extracts benefits via GPT, and saves as pending.
     """
     try:
+        if request.user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Cannot discover memberships for another user",
+            )
+
         result = ingest_unknown_membership(
             db,
-            request.user_id,
+            current_user.id,
             request.name
         )
         
@@ -100,7 +109,8 @@ def discover_membership(
 @router.post("/validate", status_code=200)
 def validate_membership(
     request: ValidateRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
 ):
     """
     Validate a pending membership (admin/owner action).
@@ -155,7 +165,10 @@ def validate_membership(
 
 
 @router.get("/pending", response_model=List[PendingMembershipOut])
-def get_pending_memberships(db: Session = Depends(get_db)):
+def get_pending_memberships(
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
     """
     Get all pending memberships awaiting validation.
     """
@@ -182,4 +195,3 @@ def get_pending_memberships(db: Session = Depends(get_db)):
         ))
     
     return result
-

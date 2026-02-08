@@ -1,8 +1,10 @@
 """LLM-powered API endpoints."""
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
+from app.core.auth import get_current_user
+from app.models import User
 from app.schemas.llm import (
     LLMRecommendationIn,
     LLMRecommendationOut,
@@ -20,7 +22,8 @@ router = APIRouter(prefix="/api/llm", tags=["llm"])
 @router.post("/recommendations", response_model=LLMRecommendationOut)
 def get_llm_recommendations(
     request: LLMRecommendationIn,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Get LLM-powered recommendations for a user.
@@ -33,9 +36,15 @@ def get_llm_recommendations(
         if request.context:
             context_dict = request.context.model_dump(exclude_none=True)
         
+        if request.user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Cannot access another user's recommendations",
+            )
+
         recommendations, relevant_benefits = generate_llm_recommendations(
             db,
-            request.user_id,
+            current_user.id,
             context_dict
         )
         
@@ -56,7 +65,8 @@ def get_llm_recommendations(
 @router.post("/smart-add", response_model=SmartAddOut)
 def smart_add_membership(
     request: SmartAddIn,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Smart check before adding a membership.
@@ -65,9 +75,15 @@ def smart_add_membership(
     or if the user has better alternatives already.
     """
     try:
+        if request.user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Cannot access another user's memberships",
+            )
+
         result = smart_add_check(
             db,
-            request.user_id,
+            current_user.id,
             request.candidate_membership_slug
         )
         
@@ -76,4 +92,3 @@ def smart_add_membership(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Smart add check failed: {str(e)}")
-

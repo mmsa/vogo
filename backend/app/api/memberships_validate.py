@@ -1,10 +1,12 @@
 """Membership validation API endpoints."""
 from typing import Dict, Any
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
+from app.core.auth import get_current_user
+from app.models import User
 from app.services.llm_validate_membership import validate_membership_with_gpt
 
 
@@ -32,7 +34,8 @@ class ValidateResponse(BaseModel):
 @router.post("/validate-name", response_model=ValidateResponse)
 def validate_membership_name(
     request: ValidateRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Validate a membership name before discovery.
@@ -44,6 +47,12 @@ def validate_membership_name(
     4. Provide suggestions if ambiguous
     """
     try:
+        if request.user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Cannot validate memberships for another user",
+            )
+
         result = validate_membership_with_gpt(
             db,
             request.name
@@ -58,4 +67,3 @@ def validate_membership_name(
             status_code=500,
             detail=f"Validation failed: {str(e)}"
         )
-

@@ -20,6 +20,8 @@ embedding_cache = TTLCache(maxsize=1000, ttl=3600)
 
 # Cache for semantic match results (10 min TTL, max 500 entries)
 match_cache = TTLCache(maxsize=500, ttl=600)
+# Cache for LLM-generated user messages (15 min TTL, max 500 entries)
+message_cache = TTLCache(maxsize=500, ttl=900)
 
 
 def get_embedding(text: str, model: str = "text-embedding-3-small") -> List[float]:
@@ -176,6 +178,27 @@ async def generate_user_message(
             "matches": [],
         }
 
+    # Cache key based on page + matched benefits to avoid repeat LLM calls
+    cache_key = hashlib.md5(
+        json.dumps(
+            {
+                "url": page_metadata.get("url"),
+                "domain": page_metadata.get("domain"),
+                "matches": [
+                    {
+                        "benefit_id": m.get("benefit_id"),
+                        "membership_name": m.get("membership_name"),
+                    }
+                    for m in semantic_matches
+                ],
+            },
+            sort_keys=True,
+        ).encode()
+    ).hexdigest()
+
+    if cache_key in message_cache:
+        return message_cache[cache_key]
+
     # Prepare context for LLM
     context = {
         "page": {
@@ -229,7 +252,7 @@ Focus on the TOP matching benefit with highest score.
     if not client:
         # Fallback when no OpenAI key
         top_match = semantic_matches[0]
-        return {
+        result = {
             "has_matches": True,
             "message": f"You have {top_match['benefit'].title} from your {top_match['membership'].name} that works on this site!",
             "action": "View Benefits",
@@ -237,6 +260,8 @@ Focus on the TOP matching benefit with highest score.
             "matches": semantic_matches,
             "match_count": len(semantic_matches),
         }
+        message_cache[cache_key] = result
+        return result
 
     try:
         response = client.chat.completions.create(
@@ -255,7 +280,7 @@ Focus on the TOP matching benefit with highest score.
 
         llm_response = json.loads(response.choices[0].message.content)
 
-        return {
+        result = {
             "has_matches": True,
             "message": llm_response.get("message", ""),
             "action": llm_response.get("action", "View Benefits"),
@@ -263,11 +288,13 @@ Focus on the TOP matching benefit with highest score.
             "matches": semantic_matches,
             "match_count": len(semantic_matches),
         }
+        message_cache[cache_key] = result
+        return result
 
     except Exception as e:
         # Fallback message
         top_match = semantic_matches[0]
-        return {
+        result = {
             "has_matches": True,
             "message": f"You have {top_match['benefit_title']} from your {top_match['membership_name']} that works on this site!",
             "action": "View Benefits",
@@ -276,3 +303,5 @@ Focus on the TOP matching benefit with highest score.
             "match_count": len(semantic_matches),
             "error": str(e),
         }
+        message_cache[cache_key] = result
+        return result

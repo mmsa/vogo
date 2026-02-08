@@ -1,6 +1,7 @@
 import { gs, ss, rm } from "../lib/storage";
 
 const CACHE = "domainCache";
+const PAGE_CACHE = "pageCache";
 const LAST_RECS = "lastRecs";
 
 // Debounce helper to avoid spamming API calls
@@ -130,11 +131,19 @@ async function handlePageContext(msg: any, tabId?: number) {
   console.log("🔧 Service Worker: Handling", hostname);
 
   const cache = (await gs<Record<string, any>>(CACHE, "local")) || {};
-  const cached = cache[hostname];
+  const pageCache = (await gs<Record<string, any>>(PAGE_CACHE, "local")) || {};
+  const urlKey = msg.url ? new URL(msg.url).origin + new URL(msg.url).pathname : "";
+  const cached = (urlKey && pageCache[urlKey]) || cache[hostname];
   const now = Date.now();
 
-  // Check cache (10 min TTL)
-  if (cached && now - cached.ts < 10 * 60 * 1000) {
+  // Check cache (page: 60 min TTL, domain: 10 min TTL)
+  const pageTtlMs = 60 * 60 * 1000;
+  const domainTtlMs = 10 * 60 * 1000;
+  if (
+    cached &&
+    now - cached.ts <
+      (urlKey && pageCache[urlKey] ? pageTtlMs : domainTtlMs)
+  ) {
     console.log("  ✅ Using cached data");
     await ss(LAST_RECS, { hostname, data: cached.data, error: null }, "local");
     notifyPopup();
@@ -254,7 +263,13 @@ async function handlePageContext(msg: any, tabId?: number) {
 
     // Update cache
     cache[hostname] = { ts: now, data: transformed };
+    if (urlKey) {
+      pageCache[urlKey] = { ts: now, data: transformed };
+    }
     await ss(CACHE, cache, "local");
+    if (urlKey) {
+      await ss(PAGE_CACHE, pageCache, "local");
+    }
 
     // Store for popup
     await ss(LAST_RECS, { hostname, data: transformed, error: null }, "local");
