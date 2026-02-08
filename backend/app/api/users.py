@@ -1,7 +1,7 @@
 """User API endpoints."""
 
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.core.auth import get_current_user
@@ -32,8 +32,17 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/{user_id}/benefits", response_model=List[BenefitRead])
-def get_user_benefits(user_id: int, db: Session = Depends(get_db)):
+def get_user_benefits(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """Get all benefits for a user based on their memberships."""
+    if user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot access another user's benefits",
+        )
     # Get user's membership IDs
     user_memberships = (
         db.query(UserMembership).filter(UserMembership.user_id == user_id).all()

@@ -1,8 +1,9 @@
 """User membership API endpoints."""
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, defer
 from app.core.db import get_db
+from app.core.auth import get_current_user
 from app.models import UserMembership, User, Membership
 from app.schemas import UserMembershipCreate, UserMembershipRead
 
@@ -11,9 +12,16 @@ router = APIRouter(prefix="/api/user-memberships", tags=["user-memberships"])
 
 @router.post("", response_model=UserMembershipRead, status_code=201)
 def create_user_membership(
-    user_membership: UserMembershipCreate, db: Session = Depends(get_db)
+    user_membership: UserMembershipCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Attach a membership to a user."""
+    if user_membership.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot modify another user's memberships",
+        )
     # Verify user exists
     user = db.query(User).filter(User.id == user_membership.user_id).first()
     if not user:
@@ -56,9 +64,17 @@ def create_user_membership(
 
 @router.delete("/{user_id}/{membership_id}", status_code=204)
 def delete_user_membership(
-    user_id: int, membership_id: int, db: Session = Depends(get_db)
+    user_id: int,
+    membership_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Remove a membership from a user."""
+    if user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot modify another user's memberships",
+        )
     # Find the user membership
     user_membership = (
         db.query(UserMembership)

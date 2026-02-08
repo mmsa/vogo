@@ -264,6 +264,8 @@ def generate_llm_recommendations(
         )
         .all()
     )
+    user_benefit_ids = {b.id for b, _ in benefits}
+    user_membership_ids = set(membership_ids)
 
     # Filter by context if provided
     filtered_benefits = benefits
@@ -372,6 +374,18 @@ def generate_llm_recommendations(
             # Validate benefit IDs
             benefit_ids = resolve_benefit_ids(db, rec_data.get("benefit_match_ids", []))
             
+            # Tips and overlaps must only reference benefits the user actually has
+            if rec_data.get("kind") in {"overlap", "tip"}:
+                if not benefit_ids:
+                    print("Skipping recommendation: missing benefit_match_ids for overlap/tip")
+                    continue
+                if any(bid not in user_benefit_ids for bid in benefit_ids):
+                    print("Skipping recommendation: includes non-user benefit IDs for overlap/tip")
+                    continue
+                if rec_data.get("kind") == "overlap" and len(benefit_ids) < 2:
+                    print("Skipping overlap recommendation: needs at least two user benefits")
+                    continue
+
             # CRITICAL: Only show overlap recommendations if benefits are from DIFFERENT memberships
             if rec_data.get("kind") == "overlap" and len(benefit_ids) > 1:
                 # Get the membership IDs for these benefits
@@ -381,6 +395,9 @@ def generate_llm_recommendations(
                 # If all benefits are from the same membership, skip this recommendation
                 if len(set(membership_ids)) == 1:
                     print(f"Skipping overlap recommendation: all benefits from same membership {membership_ids[0]}")
+                    continue
+                if any(mid not in user_membership_ids for mid in membership_ids):
+                    print("Skipping overlap recommendation: includes benefits from non-user memberships")
                     continue
             
             # CRITICAL: Validate upgrade recommendations - ensure it's actually an upgrade

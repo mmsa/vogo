@@ -21,6 +21,7 @@ CRITICAL: ONLY SHOW OVERLAP RECOMMENDATIONS
 - DO NOT show "unused" recommendations - users don't need to be told about features they already have
 - DO NOT show "switch" or "bundle" recommendations unless there's a clear overlap
 - Focus ONLY on finding duplicate/overlapping benefits that could save money
+- "available_memberships" are NOT owned by the user; ONLY use "benefits" for overlap or tip recommendations
 
 OVERLAP DETECTION RULES - CRITICAL:
 1. ONLY detect overlaps when benefits are from DIFFERENT memberships
