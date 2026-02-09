@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Sparkles, Lightbulb, Plus, Loader2, RefreshCw } from "lucide-react";
+import { Sparkles, Lightbulb, Plus, Loader2, RefreshCw, AlertTriangle } from "lucide-react";
 import { api, Recommendation, Benefit } from "@/lib/api";
 import { useAuth } from "@/store/auth";
 import { RecommendationCard } from "@/components/RecommendationCard";
@@ -16,6 +16,7 @@ export default function Recommendations() {
   const [loading, setLoading] = useState(true);
   const [hasMemberships, setHasMemberships] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const allowedKinds = new Set([
     "upgrade",
     "switch",
@@ -44,6 +45,39 @@ export default function Recommendations() {
       return bSaving - aSaving;
     });
 
+  const LOAD_TIMEOUT_MS = 5000;
+  const withTimeout = async <T,>(promise: Promise<T>, label: string) => {
+    let timeoutId: number | undefined;
+    const timeout = new Promise<T>((_, reject) => {
+      timeoutId = window.setTimeout(() => {
+        reject(new Error(`${label} timed out`));
+      }, LOAD_TIMEOUT_MS);
+    });
+    try {
+      return await Promise.race([promise, timeout]);
+    } finally {
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
+    }
+  };
+
+  const readCache = () => {
+    const cachedAI = localStorage.getItem("vogo_cache_ai");
+    if (!cachedAI) return null;
+    try {
+      const cached = JSON.parse(cachedAI);
+      if (cached.userId && cached.userId !== user?.id) {
+        localStorage.removeItem("vogo_cache_ai");
+        return null;
+      }
+      return cached;
+    } catch (e) {
+      console.error("Cache parse error:", e);
+      return null;
+    }
+  };
+
   useEffect(() => {
     if (user?.id) {
       loadRecommendations();
@@ -53,13 +87,22 @@ export default function Recommendations() {
   }, [user?.id]);
 
   const loadRecommendations = async (skipCache = false) => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
     
     try {
       setLoading(true);
+      setError(null);
       
+      const cached = readCache();
+
       // Check if user has memberships first
-      const userBenefits = await api.getUserBenefits(user.id);
+      const userBenefits = await withTimeout(
+        api.getUserBenefits(user.id),
+        "Loading benefits"
+      );
       const uniqueMembershipIds = new Set(userBenefits.map((b: Benefit) => b.membership_id));
       setHasMemberships(uniqueMembershipIds.size > 0);
       
@@ -67,37 +110,27 @@ export default function Recommendations() {
       // Cache is cleared when memberships are added/removed, so we only refresh then
       // Skip cache if explicitly requested (e.g., from refresh button)
       if (!skipCache) {
-        const cachedAI = localStorage.getItem("vogo_cache_ai");
-        if (cachedAI) {
-          try {
-            const cached = JSON.parse(cachedAI);
-            // Verify cache belongs to current user (safety check)
-            if (cached.userId && cached.userId !== user.id) {
-              // Cache is from a different user, ignore it
-              localStorage.removeItem("vogo_cache_ai");
-            } else {
-              // Filter cached recommendations (in case cache was from before filtering)
-              const filteredCached = cached.recs.filter((rec: Recommendation) =>
-                rec.kind ? allowedKinds.has(rec.kind) : false
-              );
-              setRecommendations(sortRecommendations(filteredCached));
-              setRelevantBenefits(cached.benefits);
-              setLoading(false);
-              // Don't refresh in background - only refresh when cache is cleared (memberships changed)
-              return;
-            }
-          } catch (e) {
-            // Cache parse failed, continue to load fresh
-            console.error("Cache parse error:", e);
-          }
+        if (cached) {
+          // Filter cached recommendations (in case cache was from before filtering)
+          const filteredCached = cached.recs.filter((rec: Recommendation) =>
+            rec.kind ? allowedKinds.has(rec.kind) : false
+          );
+          setRecommendations(sortRecommendations(filteredCached));
+          setRelevantBenefits(cached.benefits || []);
+          setLoading(false);
+          // Don't refresh in background - only refresh when cache is cleared (memberships changed)
+          return;
         }
       }
       
       // Use LLM-powered recommendations (only if user has memberships)
       if (uniqueMembershipIds.size > 0) {
-        const data = await api.getLLMRecommendations({
-          user_id: user.id,
-        });
+        const data = await withTimeout(
+          api.getLLMRecommendations({
+            user_id: user.id,
+          }),
+          "Loading AI recommendations"
+        );
         // Filter out "unused" recommendations - show overlaps, tips, and optimization recommendations
         const filteredRecs = (data.recommendations || []).filter(
           (rec: Recommendation) => (rec.kind ? allowedKinds.has(rec.kind) : false)
@@ -118,6 +151,17 @@ export default function Recommendations() {
       }
     } catch (error) {
       console.error("Failed to load recommendations:", error);
+      const cached = readCache();
+      if (cached?.recs?.length) {
+        const filteredCached = cached.recs.filter((rec: Recommendation) =>
+          rec.kind ? allowedKinds.has(rec.kind) : false
+        );
+        setRecommendations(sortRecommendations(filteredCached));
+        setRelevantBenefits(cached.benefits || []);
+        setError("We couldn't refresh recommendations. Showing your last saved results.");
+      } else {
+        setError("We couldn't load recommendations. Please try again.");
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -185,6 +229,34 @@ export default function Recommendations() {
         </div>
       ) : (
         <>
+          {error && (
+            <Card className="p-6 border border-amber-200 bg-amber-50/60 dark:bg-amber-900/10 dark:border-amber-900/40">
+              <div className="flex flex-col items-center text-center gap-3">
+                <AlertTriangle className="w-8 h-8 text-amber-600" />
+                <div>
+                  <p className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    {error}
+                  </p>
+                  <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                    Try again in a moment or refresh this page.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center justify-center gap-3">
+                  <Button variant="outline" onClick={() => loadRecommendations(true)}>
+                    Retry
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setError(null);
+                    }}
+                  >
+                    Dismiss
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          )}
           {/* Empty State */}
           {recommendations.length === 0 ? (
             <Card className="p-12 text-center">

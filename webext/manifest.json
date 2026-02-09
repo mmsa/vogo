@@ -21,6 +21,6 @@
     "service_worker": "bg/serviceWorker.js",
     "type": "module"
   },
-  "permissions": ["storage", "tabs", "scripting"],
-  "host_permissions": ["https://app.vogoplus.app/*"]
+  "permissions": ["storage", "tabs", "scripting", "activeTab"],
+  "host_permissions": ["https://app.vogoplus.app/*", "https://*/*", "http://*/*"]
 }

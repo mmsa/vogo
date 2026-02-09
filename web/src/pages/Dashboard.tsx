@@ -15,6 +15,7 @@ export default function Dashboard() {
   const [benefits, setBenefits] = useState<Benefit[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cachedSavings, setCachedSavings] = useState<number | null>(null);
   const { user } = useAuth();
   const allowedKinds = new Set([
     "upgrade",
@@ -114,17 +115,52 @@ export default function Dashboard() {
 
   // Calculate potential savings (convert from pence to pounds)
   // Recommendations are already filtered and deduplicated when loaded
-  const potentialSavings = recommendations.reduce((total, rec) => {
+  const computedSavings = recommendations.reduce((total, rec) => {
     const minSaving = rec.estimated_saving_min ?? 0;
     return total + (minSaving > 0 ? minSaving / 100 : 0);
   }, 0);
+  const potentialSavings = Math.round(computedSavings * 100) / 100;
 
   // Get user's first name
   const firstName = user?.email?.split('@')[0] || 'there';
 
+  useEffect(() => {
+    if (!user?.id) return;
+    const raw = localStorage.getItem("vogo_cache_savings");
+    if (!raw) return;
+    try {
+      const cached = JSON.parse(raw);
+      if (cached.userId === user.id && typeof cached.value === "number") {
+        setCachedSavings(cached.value);
+      }
+    } catch (e) {
+      // Ignore cache parse errors
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    if (potentialSavings <= 0) return;
+    setCachedSavings(potentialSavings);
+    localStorage.setItem(
+      "vogo_cache_savings",
+      JSON.stringify({ userId: user.id, value: potentialSavings })
+    );
+  }, [user?.id, potentialSavings]);
+
+  const displaySavings = potentialSavings > 0 ? potentialSavings : cachedSavings ?? 0;
+
   if (loading) {
     return (
       <div className="space-y-6">
+        <Card className="p-6 text-center">
+          <p className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+            Loading your dashboard...
+          </p>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
+            This should only take a few seconds.
+          </p>
+        </Card>
         <Skeleton className="h-32 w-full" />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Skeleton className="h-32" />
@@ -159,7 +195,7 @@ export default function Dashboard() {
               : "evening"}, {firstName} 👋
           </motion.h1>
           
-          {recommendations.length > 0 && potentialSavings > 0 ? (
+          {recommendations.length > 0 && displaySavings > 0 ? (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -169,7 +205,7 @@ export default function Dashboard() {
               <Sparkles className="w-5 h-5 text-yellow-500" />
               <p className="text-base font-medium text-zinc-900 dark:text-zinc-100">
                 Your AI assistant found <span className="text-primary font-bold">{recommendations.length}</span> new ways to save{" "}
-                <span className="text-green-600 dark:text-green-500 font-bold">£{potentialSavings.toLocaleString()}</span>/year today.
+                <span className="text-green-600 dark:text-green-500 font-bold">£{displaySavings.toLocaleString()}</span>/year today.
               </p>
             </motion.div>
           ) : (
@@ -218,7 +254,7 @@ export default function Dashboard() {
         <StatCard
           icon={TrendingUp}
           label="Potential Annual Savings"
-          value={`£${potentialSavings.toLocaleString()}`}
+          value={`£${displaySavings.toLocaleString()}`}
           iconColor="bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-500"
           delay={300}
           href="/recommendations"
