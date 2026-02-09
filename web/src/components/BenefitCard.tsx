@@ -42,10 +42,16 @@ export function BenefitCard({ benefit }: BenefitCardProps) {
               </span>
             )}
             {benefit.source_url && (
-              <Button variant="ghost" size="sm" className="h-7 text-xs gap-1">
-                Learn more
-                <ExternalLink className="w-3 h-3" />
-              </Button>
+              <a
+                href={benefit.source_url}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Button variant="ghost" size="sm" className="h-7 text-xs gap-1">
+                  Learn more
+                  <ExternalLink className="w-3 h-3" />
+                </Button>
+              </a>
             )}
           </div>
         </div>

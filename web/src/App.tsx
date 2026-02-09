@@ -16,6 +16,9 @@ import DebugInfo from "./pages/DebugInfo";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
+import About from "./pages/About";
+import Features from "./pages/Features";
 
 function App() {
   const { loadUser, isAuthenticated, user } = useAuth();
@@ -106,7 +109,10 @@ function App() {
   if (
     location.pathname === "/login" ||
     location.pathname === "/register" ||
-    location.pathname === "/privacy"
+    location.pathname === "/privacy" ||
+    location.pathname === "/terms" ||
+    location.pathname === "/about" ||
+    location.pathname === "/features"
   ) {
     return (
       <ThemeProvider>
@@ -122,6 +128,9 @@ function App() {
             }
           />
           <Route path="/privacy" element={<Privacy />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/features" element={<Features />} />
         </Routes>
       </ThemeProvider>
     );
@@ -143,6 +152,9 @@ function App() {
               <Route path="/my-perks" element={<MyPerks />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/debug" element={<DebugInfo />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/features" element={<Features />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </AppShell>
