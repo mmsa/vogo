@@ -33,7 +33,7 @@ def _generate_mock_recommendations(
     if "candidate" in user_data:
         return {
             "decision": "add",
-            "explanation": "Mock mode: OpenAI API key not configured. Add your key to enable smart membership analysis.",
+            "explanation": "AI analysis is temporarily unavailable. Showing a safe default recommendation.",
             "alternatives": [],
             "impacted_benefits": [],
         }
@@ -171,7 +171,7 @@ def _generate_mock_recommendations(
 def _call_openai(
     prompt: str,
     user_data: Dict[str, Any],
-    model: str = "gpt-4o-mini",  # Can use "gpt-3.5-turbo" for 10x faster, cheaper responses
+    model: str = settings.model_reco,
     max_retries: int = 2,
 ) -> Optional[Dict[str, Any]]:
     """
@@ -218,10 +218,11 @@ def _call_openai(
         except (json.JSONDecodeError, Exception) as e:
             print(f"OpenAI call attempt {attempt + 1} failed: {e}")
             if attempt == max_retries - 1:
-                return None
+                # Fall back to mock recommendations to avoid user-facing errors/timeouts.
+                return _generate_mock_recommendations(user_data, prompt)
             continue
 
-    return None
+    return _generate_mock_recommendations(user_data, prompt)
 
 
 def generate_llm_recommendations(

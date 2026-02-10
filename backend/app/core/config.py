@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     embed_model: str = "text-embedding-3-small"
     model_reco: str = "gpt-4o-mini"
     model_extract: str = "gpt-4o-mini"
+    openai_timeout_s: float = 15.0
+    openai_max_retries: int = 0
 
     # Search & AI
     search_provider: str = "duckduckgo"
