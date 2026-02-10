@@ -45,7 +45,7 @@ export default function Recommendations() {
       return bSaving - aSaving;
     });
 
-  const LOAD_TIMEOUT_MS = 5000;
+  const LOAD_TIMEOUT_MS = 20000;
   const withTimeout = async <T,>(promise: Promise<T>, label: string) => {
     let timeoutId: number | undefined;
     const timeout = new Promise<T>((_, reject) => {
