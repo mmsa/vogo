@@ -1,6 +1,7 @@
 """Seed script to populate database with initial memberships and benefits."""
 
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -111,7 +112,11 @@ def create_initial_users(db: Session):
     """Create admin and test users."""
     # Create admin user
     admin_email = settings.admin_email or "admin@vogoplus.app"
-    admin_password = settings.admin_password or "ChangeMe123!"
+    admin_password = settings.admin_password or ""
+    if not admin_password:
+        raise ValueError(
+            "admin_password is required for seeding. Set ADMIN_PASSWORD in the environment."
+        )
 
     admin = db.query(User).filter(User.email == admin_email).first()
     if not admin:
@@ -123,13 +128,16 @@ def create_initial_users(db: Session):
         )
         db.add(admin)
         db.flush()
-        print(f"✓ Created admin user: {admin.email} (password: {admin_password})")
+        print(f"✓ Created admin user: {admin.email}")
     else:
         print(f"✓ Admin user already exists: {admin.email}")
 
     # Create test user
-    test_email = "test@vogoplus.app"
-    test_password = "TestPass123!"
+    test_email = os.getenv("TEST_USER_EMAIL", "")
+    test_password = os.getenv("TEST_USER_PASSWORD", "")
+    if not test_email or not test_password:
+        print("ℹ️  Skipping test user creation (set TEST_USER_EMAIL and TEST_USER_PASSWORD to enable).")
+        return
 
     user = db.query(User).filter(User.email == test_email).first()
     if not user:
@@ -141,7 +149,7 @@ def create_initial_users(db: Session):
         )
         db.add(user)
         db.flush()
-        print(f"✓ Created test user: {user.email} (password: {test_password})")
+        print(f"✓ Created test user: {user.email}")
     else:
         print(f"✓ Test user already exists: {user.email}")
 
