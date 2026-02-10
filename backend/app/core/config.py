@@ -24,7 +24,7 @@ class Settings(BaseSettings):
 
     # Admin user (for seeding)
     admin_email: str = "admin@vogoplus.app"
-    admin_password: str = "ChangeMe123!"
+    admin_password: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env",

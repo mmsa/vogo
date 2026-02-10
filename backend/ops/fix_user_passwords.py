@@ -1,5 +1,6 @@
 """Quick script to update existing users with password hashes."""
 
+import os
 import sys
 from pathlib import Path
 
@@ -15,49 +16,59 @@ from app.models.user import UserRole
 
 def fix_passwords():
     """Update existing users with proper password hashes."""
+    admin_email = os.getenv("ADMIN_EMAIL", "admin@vogoplus.app")
+    admin_password = os.getenv("ADMIN_PASSWORD", "")
+    test_email = os.getenv("TEST_USER_EMAIL", "")
+    test_password = os.getenv("TEST_USER_PASSWORD", "")
+
+    if not admin_password:
+        print("❌ ADMIN_PASSWORD is required to update admin credentials.")
+        return
+
     db = SessionLocal()
 
     try:
         # Update admin user
-        admin = db.query(User).filter(User.email == "admin@vogoplus.app").first()
+        admin = db.query(User).filter(User.email == admin_email).first()
         if admin:
-            admin.password_hash = hash_password("ChangeMe123!")
+            admin.password_hash = hash_password(admin_password)
             admin.role = UserRole.ADMIN
             admin.is_active = True
-            print("✅ Updated admin@vogoplus.app password")
+            print(f"✅ Updated {admin_email} password")
         else:
             # Create admin if doesn't exist
             admin = User(
-                email="admin@vogoplus.app",
-                password_hash=hash_password("ChangeMe123!"),
+                email=admin_email,
+                password_hash=hash_password(admin_password),
                 role=UserRole.ADMIN,
                 is_active=True,
             )
             db.add(admin)
-            print("✅ Created admin@vogoplus.app")
+            print(f"✅ Created {admin_email}")
 
         # Update test user
-        test = db.query(User).filter(User.email == "test@vogoplus.app").first()
-        if test:
-            test.password_hash = hash_password("TestPass123!")
-            test.role = UserRole.USER
-            test.is_active = True
-            print("✅ Updated test@vogoplus.app password")
+        if test_email and test_password:
+            test = db.query(User).filter(User.email == test_email).first()
+            if test:
+                test.password_hash = hash_password(test_password)
+                test.role = UserRole.USER
+                test.is_active = True
+                print(f"✅ Updated {test_email} password")
+            else:
+                # Create test user if doesn't exist
+                test = User(
+                    email=test_email,
+                    password_hash=hash_password(test_password),
+                    role=UserRole.USER,
+                    is_active=True,
+                )
+                db.add(test)
+                print(f"✅ Created {test_email}")
         else:
-            # Create test user if doesn't exist
-            test = User(
-                email="test@vogoplus.app",
-                password_hash=hash_password("TestPass123!"),
-                role=UserRole.USER,
-                is_active=True,
-            )
-            db.add(test)
-            print("✅ Created test@vogoplus.app")
+            print("ℹ️  Skipping test user update (set TEST_USER_EMAIL and TEST_USER_PASSWORD to enable).")
 
         db.commit()
-        print("\n🎉 Passwords fixed! You can now login with:")
-        print("   📧 test@vogoplus.app / TestPass123!")
-        print("   👑 admin@vogoplus.app / ChangeMe123!")
+        print("\n🎉 Passwords updated.")
 
     except Exception as e:
         print(f"❌ Error: {e}")
