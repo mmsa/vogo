@@ -1,9 +1,15 @@
 import { gs, ss, rm } from "../lib/storage";
+import {
+  authenticatedFetch,
+  clearSession,
+  getApiBase,
+  getToken,
+  USER_ID_KEY,
+} from "../lib/auth";
 
 const CACHE = "domainCache";
 const PAGE_CACHE = "pageCache";
 const LAST_RECS = "lastRecs";
-const USER_ID_KEY = "userId";
 
 // Debounce helper to avoid spamming API calls
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -30,20 +36,13 @@ function normalizeDomain(hostname: string): string {
   return hostname.replace(/^www\./i, "").toLowerCase();
 }
 
-async function getCurrentUserId(
-  apiBase: string,
-  token: string
-): Promise<number> {
+async function getCurrentUserId(apiBase: string): Promise<number> {
   const cachedUserId = await gs<number>(USER_ID_KEY);
   if (typeof cachedUserId === "number" && Number.isFinite(cachedUserId)) {
     return cachedUserId;
   }
 
-  const response = await fetch(apiBase + "/api/auth/me", {
-    headers: {
-      Authorization: "Bearer " + token,
-    },
-  });
+  const response = await authenticatedFetch("/api/auth/me", {}, apiBase);
 
   if (!response.ok) {
     throw new Error(
@@ -58,7 +57,6 @@ async function getCurrentUserId(
 
 async function fetchRecommendations(
   apiBase: string,
-  token: string,
   userId: number,
   hostname: string
 ) {
@@ -67,14 +65,17 @@ async function fetchRecommendations(
       ? { user_id: userId, context: { domain } }
       : { user_id: userId };
 
-    const response = await fetch(apiBase + "/api/llm/recommendations", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + token,
+    const response = await authenticatedFetch(
+      "/api/llm/recommendations",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
       },
-      body: JSON.stringify(payload),
-    });
+      apiBase
+    );
 
     if (!response.ok) {
       throw new Error(
@@ -256,8 +257,7 @@ async function handlePageContext(msg: any, tabId?: number) {
   }
 
   // Fetch fresh recommendations
-  const apiBase = (await gs<string>("apiBase")) || "https://app.vogoplus.app";
-  const token = await gs<string>("accessToken");
+  const [apiBase, token] = await Promise.all([getApiBase(), getToken()]);
 
   console.log("  📡 Fetching fresh data from", apiBase);
   console.log(
@@ -286,8 +286,8 @@ async function handlePageContext(msg: any, tabId?: number) {
   }
 
   try {
-    const userId = await getCurrentUserId(apiBase, token);
-    const data = await fetchRecommendations(apiBase, token, userId, hostname);
+    const userId = await getCurrentUserId(apiBase);
+    const data = await fetchRecommendations(apiBase, userId, hostname);
 
     console.log(
       "  ✅ Got recommendations:",
@@ -377,9 +377,8 @@ async function handlePageContext(msg: any, tabId?: number) {
     }
   } catch (e) {
     console.error("  ❌ Error:", e);
-    if (String(e).includes("Authentication failed")) {
-      await rm("accessToken");
-      await rm(USER_ID_KEY);
+    if (String(e).includes("AUTH_") || String(e).includes("Authentication failed")) {
+      await clearSession();
       await rm(CACHE, "local");
       await rm(PAGE_CACHE, "local");
       await rm(LAST_RECS, "local");
