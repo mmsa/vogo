@@ -3,6 +3,7 @@ import { gs, ss, rm } from "../lib/storage";
 const CACHE = "domainCache";
 const PAGE_CACHE = "pageCache";
 const LAST_RECS = "lastRecs";
+const USER_ID_KEY = "userId";
 
 // Debounce helper to avoid spamming API calls
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -25,6 +26,77 @@ function shouldIgnoreUrl(url: string): boolean {
   );
 }
 
+function normalizeDomain(hostname: string): string {
+  return hostname.replace(/^www\./i, "").toLowerCase();
+}
+
+async function getCurrentUserId(
+  apiBase: string,
+  token: string
+): Promise<number> {
+  const cachedUserId = await gs<number>(USER_ID_KEY);
+  if (typeof cachedUserId === "number" && Number.isFinite(cachedUserId)) {
+    return cachedUserId;
+  }
+
+  const response = await fetch(apiBase + "/api/auth/me", {
+    headers: {
+      Authorization: "Bearer " + token,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      response.status === 401 ? "Authentication failed" : `HTTP ${response.status}`
+    );
+  }
+
+  const user = await response.json();
+  await ss(USER_ID_KEY, user.id);
+  return user.id;
+}
+
+async function fetchRecommendations(
+  apiBase: string,
+  token: string,
+  userId: number,
+  hostname: string
+) {
+  const fetchForContext = async (domain?: string) => {
+    const payload = domain
+      ? { user_id: userId, context: { domain } }
+      : { user_id: userId };
+
+    const response = await fetch(apiBase + "/api/llm/recommendations", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + token,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        response.status === 401 ? "Authentication failed" : `HTTP ${response.status}`
+      );
+    }
+
+    return response.json();
+  };
+
+  const normalizedDomain = normalizeDomain(hostname);
+  const domainScoped = await fetchForContext(normalizedDomain);
+  if (
+    (domainScoped.recommendations?.length || 0) > 0 ||
+    (domainScoped.relevant_benefits?.length || 0) > 0
+  ) {
+    return domainScoped;
+  }
+
+  return fetchForContext();
+}
+
 // Process tab URL automatically
 async function processTabUrl(tabId: number, url: string) {
   // Ignore system URLs
@@ -40,7 +112,7 @@ async function processTabUrl(tabId: number, url: string) {
 
   try {
     const urlObj = new URL(url);
-    const hostname = urlObj.hostname;
+    const hostname = normalizeDomain(urlObj.hostname);
     const isCheckout = /checkout|cart|payment|subscribe|plan/i.test(url);
 
     console.log("🔧 Auto-detecting URL:", hostname);
@@ -214,57 +286,21 @@ async function handlePageContext(msg: any, tabId?: number) {
   }
 
   try {
-    // Use NEW semantic matching endpoint
-    const r = await fetch(apiBase + "/api/check-semantic", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + token,
-      },
-      body: JSON.stringify({ url: msg.url }),
-    });
-
-    console.log("  📥 Response status:", r.status);
-
-    if (!r.ok) {
-      if (r.status === 401) {
-        await rm("accessToken");
-        await rm(CACHE, "local");
-        await rm(LAST_RECS, "local");
-      }
-      throw new Error(
-        r.status === 401 ? "Authentication failed" : `HTTP ${r.status}`
-      );
-    }
-
-    const data = await r.json();
-
-    // Transform semantic response to match old format for popup
-    const transformed = {
-      recommendations: data.has_matches
-        ? [
-            {
-              title: data.message,
-              kind: "tip",
-              action_url: null,
-              estimated_saving_min: null,
-              estimated_saving_max: null,
-            },
-          ]
-        : [],
-      relevant_benefits: data.highlight_benefit_ids || [],
-    };
+    const userId = await getCurrentUserId(apiBase, token);
+    const data = await fetchRecommendations(apiBase, token, userId, hostname);
 
     console.log(
-      "  ✅ Got semantic match:",
-      data.has_matches ? "YES" : "NO",
-      data.message
+      "  ✅ Got recommendations:",
+      data.recommendations?.length || 0,
+      "recommendations,",
+      data.relevant_benefits?.length || 0,
+      "relevant benefits"
     );
 
     // Update cache
-    cache[hostname] = { ts: now, data: transformed };
+    cache[hostname] = { ts: now, data };
     if (urlKey) {
-      pageCache[urlKey] = { ts: now, data: transformed };
+      pageCache[urlKey] = { ts: now, data };
     }
     await ss(CACHE, cache, "local");
     if (urlKey) {
@@ -272,12 +308,12 @@ async function handlePageContext(msg: any, tabId?: number) {
     }
 
     // Store for popup
-    await ss(LAST_RECS, { hostname, data: transformed, error: null }, "local");
+    await ss(LAST_RECS, { hostname, data, error: null }, "local");
     console.log("  💾 Stored in LAST_RECS");
     notifyPopup();
 
     // Automatically inject content script and show badge if benefits found
-    if (data.has_matches && tabId) {
+    if ((data.recommendations?.length || 0) > 0 && tabId) {
       try {
         // Inject content script first (if not already injected)
         await chrome.scripting
@@ -297,8 +333,10 @@ async function handlePageContext(msg: any, tabId?: number) {
           .sendMessage(tabId, {
             type: "SHOW_BADGE",
             message:
-              data.message || "You have benefits available on this site!",
-            benefitCount: data.highlight_benefit_ids?.length || 0,
+              data.recommendations[0]?.title ||
+              data.recommendations[0]?.rationale ||
+              "You have benefits available on this site!",
+            benefitCount: data.relevant_benefits?.length || 0,
           })
           .catch((e) => {
             // Content script might not be ready, that's okay
@@ -314,7 +352,7 @@ async function handlePageContext(msg: any, tabId?: number) {
       } catch (e) {
         console.log("Could not show badge:", e);
       }
-    } else if (!data.has_matches && tabId) {
+    } else if ((data.recommendations?.length || 0) === 0 && tabId) {
       // Hide badge if no matches
       try {
         chrome.tabs
@@ -330,7 +368,7 @@ async function handlePageContext(msg: any, tabId?: number) {
 
     // Auto-open on checkout if enabled
     const autoOpen = await gs<boolean>("autoOpen");
-    if (autoOpen && isCheckout && data.has_matches) {
+    if (autoOpen && isCheckout && (data.recommendations?.length || 0) > 0) {
       try {
         await chrome.action.openPopup();
       } catch (e) {
@@ -339,6 +377,13 @@ async function handlePageContext(msg: any, tabId?: number) {
     }
   } catch (e) {
     console.error("  ❌ Error:", e);
+    if (String(e).includes("Authentication failed")) {
+      await rm("accessToken");
+      await rm(USER_ID_KEY);
+      await rm(CACHE, "local");
+      await rm(PAGE_CACHE, "local");
+      await rm(LAST_RECS, "local");
+    }
     await ss(
       LAST_RECS,
       {
