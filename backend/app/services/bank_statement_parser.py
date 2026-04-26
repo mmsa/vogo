@@ -1,11 +1,15 @@
 """Bank statement PDF parser service to extract recurring subscriptions."""
 
-import pdfplumber
-import re
 import io
+import re
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from app.core.openai_client import get_openai_client
+
+try:
+    import pdfplumber
+except ImportError:
+    pdfplumber = None
 
 openai_client = get_openai_client()
 
@@ -20,6 +24,9 @@ def extract_text_from_pdf(pdf_file) -> str:
     Returns:
         Extracted text as string
     """
+    if pdfplumber is None:
+        raise ValueError("PDF parsing is unavailable because pdfplumber is not installed")
+
     text = ""
     try:
         # Convert bytes to file-like object if needed
@@ -534,5 +541,4 @@ If no subscriptions found, return empty array []."""
         # Fallback: extract transactions then identify subscriptions
         transactions = extract_transactions(text)
         return identify_subscriptions_with_llm(transactions) if transactions else []
-
 

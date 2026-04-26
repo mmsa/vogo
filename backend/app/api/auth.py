@@ -1,9 +1,10 @@
 """Authentication API endpoints."""
 
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 import uuid
+from jose import JWTError
 
 from app.core.db import get_db
 from app.core.auth import get_current_user, get_optional_user
@@ -53,7 +54,9 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenOut)
-def login(credentials: LoginIn, db: Session = Depends(get_db)):
+def login(
+    credentials: LoginIn, request: Request, db: Session = Depends(get_db)
+):
     """Authenticate user and return JWT tokens."""
     # Find user
     user = db.query(User).filter(User.email == credentials.email).first()
@@ -78,7 +81,7 @@ def login(credentials: LoginIn, db: Session = Depends(get_db)):
     session = SessionModel(
         user_id=user.id,
         refresh_token_jti=refresh_jti,
-        user_agent="web",  # Could extract from request headers
+        user_agent=request.headers.get("user-agent"),
         revoked=False,
     )
     db.add(session)
@@ -151,8 +154,14 @@ def refresh_token(refresh_in: RefreshIn, db: Session = Depends(get_db)):
             access_token=access_token,
             refresh_token=new_refresh_token,
         )
-
-    except Exception as e:
+    except HTTPException:
+        raise
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token",
+        )
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid refresh token",
