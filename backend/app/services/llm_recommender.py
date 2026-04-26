@@ -337,7 +337,7 @@ def generate_llm_recommendations(
                 "vendor_domain": b.vendor_domain,
                 "source_url": b.source_url,
             }
-            for b, m in benefits
+            for b, m in filtered_benefits
         ],
         "available_memberships": [
             {
