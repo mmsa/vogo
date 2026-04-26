@@ -1,4 +1,13 @@
 // ULTRA SIMPLE VERSION - FIXED
+import {
+  authenticatedFetch,
+  clearSession,
+  getApiBase,
+  getToken,
+  setSession,
+  USER_ID_KEY,
+} from "../lib/auth";
+
 const root = document.getElementById("app")!;
 
 root.innerHTML = `
@@ -20,7 +29,6 @@ root.innerHTML = `
 
 const content = document.getElementById("content")!;
 const subtitle = document.getElementById("subtitle")!;
-const USER_ID_KEY = "userId";
 const signedInFooter = `
   <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#6b7280">
     <span>Signed in via extension</span>
@@ -74,17 +82,13 @@ const renderRecommendationsList = (items: any[]) =>
     )
     .join("");
 
-async function ensureUserId(apiBase: string, accessToken: string) {
+async function ensureUserId(apiBase: string) {
   const storage = await chrome.storage.sync.get(USER_ID_KEY);
   if (typeof storage.userId === "number") {
     return storage.userId;
   }
 
-  const response = await fetch(apiBase + "/api/auth/me", {
-    headers: {
-      Authorization: "Bearer " + accessToken,
-    },
-  });
+  const response = await authenticatedFetch("/api/auth/me", {}, apiBase);
 
   if (!response.ok) {
     throw new Error(
@@ -99,7 +103,6 @@ async function ensureUserId(apiBase: string, accessToken: string) {
 
 async function fetchRecommendations(
   apiBase: string,
-  accessToken: string,
   userId: number,
   hostname: string
 ) {
@@ -108,22 +111,25 @@ async function fetchRecommendations(
       ? { user_id: userId, context: { domain } }
       : { user_id: userId };
 
-    const response = await fetch(apiBase + "/api/llm/recommendations", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + accessToken,
+    const authResponse = await authenticatedFetch(
+      "/api/llm/recommendations",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
       },
-      body: JSON.stringify(payload),
-    });
+      apiBase
+    );
 
-    if (!response.ok) {
+    if (!authResponse.ok) {
       throw new Error(
-        response.status === 401 ? "Authentication failed" : `HTTP ${response.status}`
+        authResponse.status === 401 ? "Authentication failed" : `HTTP ${authResponse.status}`
       );
     }
 
-    return response.json();
+    return authResponse.json();
   };
 
   const domainScoped = await fetchForContext(normalizeDomain(hostname));
@@ -201,7 +207,7 @@ const attachSignOutHandler = async () => {
     | null;
   if (!signOutBtn) return;
   signOutBtn.onclick = async () => {
-    await chrome.storage.sync.remove(["accessToken", USER_ID_KEY]);
+    await clearSession();
     await chrome.storage.local.remove(["domainCache", "pageCache", "lastRecs"]);
     try {
       const [tab] = await chrome.tabs.query({
@@ -255,9 +261,7 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
   }
 
   // Get token - FIX: get the whole result object first
-  const storage = await chrome.storage.sync.get(["accessToken", "apiBase"]);
-  const accessToken = storage.accessToken;
-  const apiBase = storage.apiBase || "https://app.vogoplus.app";
+  const [accessToken, apiBase] = await Promise.all([getToken(), getApiBase()]);
 
   console.log("Token check:", accessToken ? "FOUND" : "MISSING");
 
@@ -342,11 +346,9 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
 
         const data = await response.json();
 
-        const meResponse = await fetch(apiBase + "/api/auth/me", {
-          headers: {
-            Authorization: "Bearer " + data.access_token,
-          },
-        });
+        await setSession(data.access_token, data.refresh_token);
+
+        const meResponse = await authenticatedFetch("/api/auth/me", {}, apiBase);
 
         if (!meResponse.ok) {
           throw new Error("Failed to load profile");
@@ -356,7 +358,6 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
 
         // Save token to extension storage
         await chrome.storage.sync.set({
-          accessToken: data.access_token,
           apiBase: apiBase,
           userId: me.id,
         });
@@ -420,8 +421,8 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
       <div style="font-size:13px;color:#666">${hostname}</div>
     `;
 
-    const userId = await ensureUserId(apiBase, accessToken);
-    const data = await fetchRecommendations(apiBase, accessToken, userId, hostname);
+    const userId = await ensureUserId(apiBase);
+    const data = await fetchRecommendations(apiBase, userId, hostname);
 
     console.log("Recommendations API Response:", data);
 
@@ -457,12 +458,20 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
     await attachSignOutHandler();
   } catch (e) {
     console.error("Error fetching recommendations:", e);
-    if (String(e).includes("Authentication failed")) {
-      await chrome.storage.sync.remove(["accessToken", USER_ID_KEY]);
+    if (String(e).includes("AUTH_") || String(e).includes("Authentication failed")) {
+      await clearSession();
     }
     content.innerHTML = `
-      <div style="color:#dc2626;font-weight:600">❌ Connection Error</div>
-      <div style="font-size:13px;color:#666;margin-top:8px">Could not reach the server. Make sure the backend is running on port 8000.</div>
+      <div style="color:#dc2626;font-weight:600">❌ ${
+        String(e).includes("AUTH_") || String(e).includes("Authentication failed")
+          ? "Session expired"
+          : "Connection Error"
+      }</div>
+      <div style="font-size:13px;color:#666;margin-top:8px">${
+        String(e).includes("AUTH_") || String(e).includes("Authentication failed")
+          ? "Please sign in again to refresh your extension session."
+          : "Could not reach the server. Make sure the backend is running and the API base URL is correct."
+      }</div>
       ${signedInFooter}
     `;
     await attachSignOutHandler();
