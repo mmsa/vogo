@@ -1,7 +1,10 @@
 """OpenAI client wrapper with caching."""
 
 import json
-import orjson
+try:
+    import orjson
+except ImportError:
+    orjson = None
 from cachetools import TTLCache
 from app.core.openai_client import get_openai_client
 
@@ -10,6 +13,12 @@ client = get_openai_client()
 
 # Cache responses for 15 minutes
 cache = TTLCache(maxsize=512, ttl=900)
+
+
+def _serialize_messages(messages: list) -> str:
+    if orjson is not None:
+        return orjson.dumps(messages).decode()
+    return json.dumps(messages, sort_keys=True, separators=(",", ":"))
 
 
 def _call(
@@ -34,7 +43,7 @@ def _call(
         raise ValueError("OpenAI API key not configured")
 
     # Create cache key
-    key = (model, orjson.dumps(messages).decode(), max_tokens, temperature)
+    key = (model, _serialize_messages(messages), max_tokens, temperature)
 
     # Check cache
     if key in cache:

@@ -257,13 +257,11 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
     });
   } catch (e) {
     // Content script injection failed (might be on restricted page), continue anyway
-    console.log("Could not inject content script:", e);
+    console.debug("Could not inject content script:", e);
   }
 
   // Get token - FIX: get the whole result object first
   const [accessToken, apiBase] = await Promise.all([getToken(), getApiBase()]);
-
-  console.log("Token check:", accessToken ? "FOUND" : "MISSING");
 
   if (!accessToken) {
     // Show login form
@@ -362,8 +360,6 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
           userId: me.id,
         });
 
-        console.log("✅ Token saved, reloading popup...");
-
         // Small delay to ensure storage is persisted
         await new Promise((resolve) => setTimeout(resolve, 100));
 
@@ -401,7 +397,6 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
 
   // Use cached data if available and matches current hostname
   if (cachedData && cachedData.hostname === hostname && cachedData.data) {
-    console.log("Using cached data from background worker");
     const data = cachedData.data;
 
     if (
@@ -423,8 +418,6 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
 
     const userId = await ensureUserId(apiBase);
     const data = await fetchRecommendations(apiBase, userId, hostname);
-
-    console.log("Recommendations API Response:", data);
 
     // Send message to content script to show/hide badge
     try {

@@ -102,7 +102,6 @@ async function fetchRecommendations(
 async function processTabUrl(tabId: number, url: string) {
   // Ignore system URLs
   if (shouldIgnoreUrl(url)) {
-    console.log("🔧 Ignoring system URL:", url);
     return;
   }
 
@@ -115,8 +114,6 @@ async function processTabUrl(tabId: number, url: string) {
     const urlObj = new URL(url);
     const hostname = normalizeDomain(urlObj.hostname);
     const isCheckout = /checkout|cart|payment|subscribe|plan/i.test(url);
-
-    console.log("🔧 Auto-detecting URL:", hostname);
 
     // Call existing handler
     await handlePageContext(
@@ -167,7 +164,7 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
     }
   } catch (e) {
     // Tab might not be accessible (e.g., chrome:// pages)
-    console.log("Could not access tab:", e);
+    console.debug("Could not access tab:", e);
   }
 });
 
@@ -193,7 +190,7 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
     try {
       await chrome.action.openPopup();
     } catch (e) {
-      console.log("Could not open popup:", e);
+      console.debug("Could not open popup:", e);
     }
     return true;
   }
@@ -201,7 +198,6 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
 
 async function handlePageContext(msg: any, tabId?: number) {
   const { hostname, isCheckout } = msg;
-  console.log("🔧 Service Worker: Handling", hostname);
 
   const cache = (await gs<Record<string, any>>(CACHE, "local")) || {};
   const pageCache = (await gs<Record<string, any>>(PAGE_CACHE, "local")) || {};
@@ -217,7 +213,6 @@ async function handlePageContext(msg: any, tabId?: number) {
     now - cached.ts <
       (urlKey && pageCache[urlKey] ? pageTtlMs : domainTtlMs)
   ) {
-    console.log("  ✅ Using cached data");
     await ss(LAST_RECS, { hostname, data: cached.data, error: null }, "local");
     notifyPopup();
 
@@ -259,19 +254,7 @@ async function handlePageContext(msg: any, tabId?: number) {
   // Fetch fresh recommendations
   const [apiBase, token] = await Promise.all([getApiBase(), getToken()]);
 
-  console.log("  📡 Fetching fresh data from", apiBase);
-  console.log(
-    "  🔑 Token:",
-    token ? `present (${token.substring(0, 20)}...)` : "MISSING"
-  );
-
-  // DEBUG: Check all storage
-  const allSync = await chrome.storage.sync.get(null);
-  console.log("  🗄️  All sync storage keys:", Object.keys(allSync));
-
   if (!token) {
-    console.error("  ❌ No token in storage!");
-    console.error("  💡 User needs to log in via the extension popup");
     await ss(
       LAST_RECS,
       {
@@ -289,14 +272,6 @@ async function handlePageContext(msg: any, tabId?: number) {
     const userId = await getCurrentUserId(apiBase);
     const data = await fetchRecommendations(apiBase, userId, hostname);
 
-    console.log(
-      "  ✅ Got recommendations:",
-      data.recommendations?.length || 0,
-      "recommendations,",
-      data.relevant_benefits?.length || 0,
-      "relevant benefits"
-    );
-
     // Update cache
     cache[hostname] = { ts: now, data };
     if (urlKey) {
@@ -309,7 +284,6 @@ async function handlePageContext(msg: any, tabId?: number) {
 
     // Store for popup
     await ss(LAST_RECS, { hostname, data, error: null }, "local");
-    console.log("  💾 Stored in LAST_RECS");
     notifyPopup();
 
     // Automatically inject content script and show badge if benefits found
@@ -340,7 +314,7 @@ async function handlePageContext(msg: any, tabId?: number) {
           })
           .catch((e) => {
             // Content script might not be ready, that's okay
-            console.log("Could not send badge message:", e);
+            console.debug("Could not send badge message:", e);
           });
 
         // Update badge icon
@@ -350,7 +324,7 @@ async function handlePageContext(msg: any, tabId?: number) {
         });
         chrome.action.setBadgeBackgroundColor({ color: "#10b981" });
       } catch (e) {
-        console.log("Could not show badge:", e);
+        console.debug("Could not show badge:", e);
       }
     } else if ((data.recommendations?.length || 0) === 0 && tabId) {
       // Hide badge if no matches
@@ -372,11 +346,11 @@ async function handlePageContext(msg: any, tabId?: number) {
       try {
         await chrome.action.openPopup();
       } catch (e) {
-        console.log("Could not auto-open popup:", e);
+        console.debug("Could not auto-open popup:", e);
       }
     }
   } catch (e) {
-    console.error("  ❌ Error:", e);
+    console.error("Extension request failed:", e);
     if (String(e).includes("AUTH_") || String(e).includes("Authentication failed")) {
       await clearSession();
       await rm(CACHE, "local");

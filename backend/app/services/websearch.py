@@ -2,8 +2,16 @@
 
 import httpx
 from bs4 import BeautifulSoup
-from duckduckgo_search import DDGS
 from typing import List, Dict
+
+
+def _get_ddgs():
+    try:
+        from duckduckgo_search import DDGS
+
+        return DDGS()
+    except ImportError:
+        return None
 
 
 def search_urls(query: str, limit: int = 5) -> List[str]:
@@ -18,7 +26,9 @@ def search_urls(query: str, limit: int = 5) -> List[str]:
         List of URLs
     """
     try:
-        ddgs = DDGS()
+        ddgs = _get_ddgs()
+        if ddgs is None:
+            return []
         results = ddgs.text(query, max_results=limit)
         urls = [r["href"] for r in results if "http" in r.get("href", "")]
         return urls[:limit]
@@ -53,7 +63,10 @@ def search_membership_sites(query: str, limit: int = 5) -> List[Dict[str, str]]:
                 )
                 time.sleep(delay)
 
-            ddgs = DDGS()
+            ddgs = _get_ddgs()
+            if ddgs is None:
+                print("  ⚠️ duckduckgo_search is not installed")
+                return []
             print(f"  🔎 Executing DuckDuckGo search: '{query}'")
 
             # Try with different parameters

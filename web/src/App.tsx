@@ -20,6 +20,8 @@ import Terms from "./pages/Terms";
 import About from "./pages/About";
 import Features from "./pages/Features";
 
+const ENABLE_DEBUG_ROUTES = import.meta.env.VITE_ENABLE_DEBUG_ROUTES === "true";
+
 function App() {
   const { loadUser, isAuthenticated, user } = useAuth();
   const location = useLocation();
@@ -151,7 +153,9 @@ function App() {
               <Route path="/recommendations" element={<Recommendations />} />
               <Route path="/my-perks" element={<MyPerks />} />
               <Route path="/admin" element={<Admin />} />
-              <Route path="/debug" element={<DebugInfo />} />
+              {ENABLE_DEBUG_ROUTES && (
+                <Route path="/debug" element={<DebugInfo />} />
+              )}
               <Route path="/terms" element={<Terms />} />
               <Route path="/about" element={<About />} />
               <Route path="/features" element={<Features />} />
