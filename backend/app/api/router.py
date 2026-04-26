@@ -1,6 +1,7 @@
 """Main API router that includes all sub-routers."""
 
 from fastapi import APIRouter
+from app.core.config import settings
 from app.api import (
     auth,
     admin,
@@ -47,5 +48,5 @@ api_router.include_router(analytics.router)
 # Bank Statement Processing
 api_router.include_router(bank_statement.router)
 
-# Development utilities (TODO: Remove in production)
-api_router.include_router(dev_admin.router)
+if settings.enable_dev_endpoints:
+    api_router.include_router(dev_admin.router)

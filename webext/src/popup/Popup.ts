@@ -1,4 +1,13 @@
 // ULTRA SIMPLE VERSION - FIXED
+import {
+  authenticatedFetch,
+  clearSession,
+  getApiBase,
+  getToken,
+  setSession,
+  USER_ID_KEY,
+} from "../lib/auth";
+
 const root = document.getElementById("app")!;
 
 root.innerHTML = `
@@ -27,14 +36,179 @@ const signedInFooter = `
   </div>
 `;
 
+const normalizeDomain = (hostname: string) =>
+  hostname.replace(/^www\./i, "").toLowerCase();
+
+const renderBenefitsList = (items: any[]) =>
+  items
+    .slice(0, 3)
+    .map(
+      (item) => `
+        <div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin-bottom:8px;background:#f9fafb">
+          <div style="font-weight:600;font-size:14px;color:#111;margin-bottom:4px">${
+            item.title
+          }</div>
+          ${
+            item.description
+              ? `<div style="font-size:12px;color:#666;margin-bottom:6px">${item.description}</div>`
+              : ""
+          }
+        </div>
+      `
+    )
+    .join("");
+
+const renderRecommendationsList = (items: any[]) =>
+  items
+    .slice(0, 3)
+    .map(
+      (item) => `
+        <div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin-bottom:8px;background:#f9fafb">
+          <div style="font-weight:600;font-size:14px;color:#111;margin-bottom:4px">${
+            item.title
+          }</div>
+          <div style="font-size:12px;color:#666;margin-bottom:6px">${
+            item.rationale || ""
+          }</div>
+          ${
+            item.kind
+              ? `<div style="font-size:11px;color:#667eea;font-weight:600;text-transform:capitalize">${String(
+                  item.kind
+                ).replace(/_/g, " ")}</div>`
+              : ""
+          }
+        </div>
+      `
+    )
+    .join("");
+
+async function ensureUserId(apiBase: string) {
+  const storage = await chrome.storage.sync.get(USER_ID_KEY);
+  if (typeof storage.userId === "number") {
+    return storage.userId;
+  }
+
+  const response = await authenticatedFetch("/api/auth/me", {}, apiBase);
+
+  if (!response.ok) {
+    throw new Error(
+      response.status === 401 ? "Authentication failed" : `HTTP ${response.status}`
+    );
+  }
+
+  const user = await response.json();
+  await chrome.storage.sync.set({ userId: user.id });
+  return user.id;
+}
+
+async function fetchRecommendations(
+  apiBase: string,
+  userId: number,
+  hostname: string
+) {
+  const fetchForContext = async (domain?: string) => {
+    const payload = domain
+      ? { user_id: userId, context: { domain } }
+      : { user_id: userId };
+
+    const authResponse = await authenticatedFetch(
+      "/api/llm/recommendations",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      },
+      apiBase
+    );
+
+    if (!authResponse.ok) {
+      throw new Error(
+        authResponse.status === 401 ? "Authentication failed" : `HTTP ${authResponse.status}`
+      );
+    }
+
+    return authResponse.json();
+  };
+
+  const domainScoped = await fetchForContext(normalizeDomain(hostname));
+  if (
+    (domainScoped.recommendations?.length || 0) > 0 ||
+    (domainScoped.relevant_benefits?.length || 0) > 0
+  ) {
+    return domainScoped;
+  }
+
+  return fetchForContext();
+}
+
+function renderResultState(hostname: string, data: any) {
+  const recommendations = data.recommendations || [];
+  const relevantBenefits = data.relevant_benefits || [];
+
+  if (recommendations.length === 0 && relevantBenefits.length === 0) {
+    content.innerHTML = `
+      <div style="font-weight:600;font-size:16px;margin-bottom:8px">🔍 No recommendations for ${hostname}</div>
+      <p style="font-size:13px;color:#666;line-height:1.5">The same recommendations API used by the web app did not return any matches right now for this account.</p>
+      <button id="openAppBtn" style="background:#667eea;color:white;border:none;padding:12px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;width:100%;margin-top:12px;transition:all 0.2s;box-shadow:0 2px 6px rgba(102,126,234,0.3)">
+        🚀 View Full Dashboard
+      </button>
+      ${signedInFooter}
+    `;
+  } else if (recommendations.length === 0) {
+    content.innerHTML = `
+      <div style="text-align:left">
+        <div style="background:linear-gradient(135deg,#10b981 0%,#059669 100%);color:white;padding:16px;border-radius:12px;margin-bottom:16px;box-shadow:0 4px 12px rgba(16,185,129,0.3)">
+          <div style="font-size:20px;margin-bottom:8px">✨</div>
+          <div style="font-size:15px;font-weight:600;line-height:1.5">You have relevant benefits for ${hostname}.</div>
+        </div>
+        <div style="font-size:13px;color:#666;margin-bottom:12px;font-weight:600">Relevant benefits (${relevantBenefits.length}):</div>
+        ${renderBenefitsList(relevantBenefits)}
+        <button id="openAppBtn" style="background:#667eea;color:white;border:none;padding:12px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;width:100%;margin-top:8px;transition:all 0.2s;box-shadow:0 2px 6px rgba(102,126,234,0.3)">
+          🚀 View Full Dashboard
+        </button>
+        ${signedInFooter}
+      </div>
+    `;
+  } else {
+    content.innerHTML = `
+      <div style="text-align:left">
+        <div style="background:linear-gradient(135deg,#10b981 0%,#059669 100%);color:white;padding:16px;border-radius:12px;margin-bottom:16px;box-shadow:0 4px 12px rgba(16,185,129,0.3)">
+          <div style="font-size:20px;margin-bottom:8px">✨</div>
+          <div style="font-size:15px;font-weight:600;line-height:1.5">${
+            recommendations[0]?.title || "You have recommendations available."
+          }</div>
+          ${
+            recommendations[0]?.rationale
+              ? `<div style="font-size:12px;opacity:0.9;margin-top:6px;line-height:1.4">${recommendations[0].rationale}</div>`
+              : ""
+          }
+        </div>
+        <div style="font-size:13px;color:#666;margin-bottom:12px;font-weight:600">Top recommendations (${recommendations.length}):</div>
+        ${renderRecommendationsList(recommendations)}
+        <button id="openAppBtn" style="background:#667eea;color:white;border:none;padding:12px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;width:100%;margin-top:8px;transition:all 0.2s;box-shadow:0 2px 6px rgba(102,126,234,0.3)">
+          🚀 View Full Dashboard
+        </button>
+        ${signedInFooter}
+      </div>
+    `;
+  }
+
+  const openBtn = document.getElementById("openAppBtn");
+  if (openBtn) {
+    openBtn.onclick = () => chrome.tabs.create({ url: "https://app.vogoplus.app" });
+  }
+}
+
 const attachSignOutHandler = async () => {
   const signOutBtn = document.getElementById("signOutBtn") as
     | HTMLButtonElement
     | null;
   if (!signOutBtn) return;
   signOutBtn.onclick = async () => {
-    await chrome.storage.sync.remove("accessToken");
-    await chrome.storage.local.remove(["domainCache", "lastRecs"]);
+    await clearSession();
+    await chrome.storage.local.remove(["domainCache", "pageCache", "lastRecs"]);
     try {
       const [tab] = await chrome.tabs.query({
         active: true,
@@ -72,7 +246,7 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
     return;
   }
 
-  const hostname = new URL(tab.url).hostname;
+  const hostname = normalizeDomain(new URL(tab.url).hostname);
   subtitle.textContent = hostname;
 
   // Inject content script for badge display (only when popup is opened - activeTab permission)
@@ -83,15 +257,11 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
     });
   } catch (e) {
     // Content script injection failed (might be on restricted page), continue anyway
-    console.log("Could not inject content script:", e);
+    console.debug("Could not inject content script:", e);
   }
 
   // Get token - FIX: get the whole result object first
-  const storage = await chrome.storage.sync.get(["accessToken", "apiBase"]);
-  const accessToken = storage.accessToken;
-  const apiBase = storage.apiBase || "https://app.vogoplus.app";
-
-  console.log("Token check:", accessToken ? "FOUND" : "MISSING");
+  const [accessToken, apiBase] = await Promise.all([getToken(), getApiBase()]);
 
   if (!accessToken) {
     // Show login form
@@ -174,13 +344,21 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
 
         const data = await response.json();
 
+        await setSession(data.access_token, data.refresh_token);
+
+        const meResponse = await authenticatedFetch("/api/auth/me", {}, apiBase);
+
+        if (!meResponse.ok) {
+          throw new Error("Failed to load profile");
+        }
+
+        const me = await meResponse.json();
+
         // Save token to extension storage
         await chrome.storage.sync.set({
-          accessToken: data.access_token,
           apiBase: apiBase,
+          userId: me.id,
         });
-
-        console.log("✅ Token saved, reloading popup...");
 
         // Small delay to ensure storage is persisted
         await new Promise((resolve) => setTimeout(resolve, 100));
@@ -219,32 +397,13 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
 
   // Use cached data if available and matches current hostname
   if (cachedData && cachedData.hostname === hostname && cachedData.data) {
-    console.log("Using cached data from background worker");
     const data = cachedData.data;
 
-    // Show cached results immediately
-    if (data.recommendations && data.recommendations.length > 0) {
-      // Show the AI-generated message
-      content.innerHTML = `
-        <div style="text-align:left">
-          <div style="background:linear-gradient(135deg,#10b981 0%,#059669 100%);color:white;padding:16px;border-radius:12px;margin-bottom:16px;box-shadow:0 4px 12px rgba(16,185,129,0.3)">
-            <div style="font-size:20px;margin-bottom:8px">✨</div>
-            <div style="font-size:15px;font-weight:600;line-height:1.5">${
-              data.recommendations[0]?.title || "You have benefits available!"
-            }</div>
-          </div>
-          <button id="openAppBtn" style="background:#667eea;color:white;border:none;padding:12px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;width:100%;margin-top:8px;transition:all 0.2s;box-shadow:0 2px 6px rgba(102,126,234,0.3)">
-            🚀 View Full Dashboard
-          </button>
-          ${signedInFooter}
-        </div>
-      `;
-
-      const openBtn = document.getElementById("openAppBtn");
-      if (openBtn) {
-        openBtn.onclick = () =>
-          chrome.tabs.create({ url: "https://app.vogoplus.app" });
-      }
+    if (
+      (data.recommendations?.length || 0) > 0 ||
+      (data.relevant_benefits?.length || 0) > 0
+    ) {
+      renderResultState(hostname, data);
       await attachSignOutHandler();
       return;
     }
@@ -257,40 +416,20 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
       <div style="font-size:13px;color:#666">${hostname}</div>
     `;
 
-    const response = await fetch(apiBase + "/api/check-semantic", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + accessToken,
-      },
-      body: JSON.stringify({ url: tab.url }),
-    });
-
-    console.log("API Response:", response.status);
-
-    if (!response.ok) {
-      content.innerHTML = `
-        <div style="color:#dc2626;font-weight:600">❌ API Error</div>
-        <div style="font-size:13px;color:#666;margin-top:8px">Status: ${response.status}</div>
-        ${signedInFooter}
-      `;
-      await attachSignOutHandler();
-      return;
-    }
-
-    const data = await response.json();
-
-    console.log("Semantic API Response:", data);
+    const userId = await ensureUserId(apiBase);
+    const data = await fetchRecommendations(apiBase, userId, hostname);
 
     // Send message to content script to show/hide badge
     try {
-      if (data.has_matches) {
+      if ((data.recommendations?.length || 0) > 0) {
         chrome.tabs
           .sendMessage(tab.id!, {
             type: "SHOW_BADGE",
             message:
-              data.message || "You have benefits available on this site!",
-            benefitCount: data.highlight_benefit_ids?.length || 0,
+              data.recommendations[0]?.title ||
+              data.recommendations[0]?.rationale ||
+              "You have benefits available on this site!",
+            benefitCount: data.relevant_benefits?.length || 0,
           })
           .catch(() => {
             // Content script might not be injected, that's okay
@@ -308,78 +447,24 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
       // Ignore errors - badge display is optional
     }
 
-    if (!data.has_matches) {
-      content.innerHTML = `
-        <div style="font-weight:600;font-size:16px;margin-bottom:8px">🔍 No perks for ${hostname}</div>
-        <p style="font-size:13px;color:#666;line-height:1.5">${
-          data.message || "We couldn't find any benefits matching this site."
-        }<br><br>Try <strong>amazon.co.uk</strong>, <strong>booking.com</strong>, or other sites where you have perks!</p>
-        ${signedInFooter}
-      `;
-      await attachSignOutHandler();
-      return;
-    }
-
-    // Show the AI-generated message
-    content.innerHTML = `
-      <div style="text-align:left">
-        <div style="background:linear-gradient(135deg,#10b981 0%,#059669 100%);color:white;padding:16px;border-radius:12px;margin-bottom:16px;box-shadow:0 4px 12px rgba(16,185,129,0.3)">
-          <div style="font-size:20px;margin-bottom:8px">✨</div>
-          <div style="font-size:15px;font-weight:600;line-height:1.5">${
-            data.message
-          }</div>
-        </div>
-        ${
-          data.matches && data.matches.length > 0
-            ? `
-          <div style="font-size:13px;color:#666;margin-bottom:12px;font-weight:600">Relevant benefits (${
-            data.matches.length
-          }):</div>
-          ${data.matches
-            .slice(0, 3)
-            .map(
-              (m) => `
-            <div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin-bottom:8px;background:#f9fafb">
-              <div style="font-weight:600;font-size:14px;color:#111;margin-bottom:4px">${
-                m.benefit_title
-              }</div>
-              <div style="font-size:12px;color:#666;margin-bottom:6px">${
-                m.benefit_description
-              }</div>
-              <div style="display:flex;justify-content:space-between;align-items:center">
-                <span style="font-size:11px;color:#667eea;font-weight:600">${
-                  m.membership_name
-                }</span>
-                <span style="font-size:11px;background:#d1fae5;color:#059669;padding:4px 8px;border-radius:6px;font-weight:600">${Math.round(
-                  m.similarity_score * 100
-                )}% match</span>
-              </div>
-            </div>
-          `
-            )
-            .join("")}
-        `
-            : ""
-        }
-        <button id="openAppBtn" style="background:#667eea;color:white;border:none;padding:12px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;width:100%;margin-top:8px;transition:all 0.2s;box-shadow:0 2px 6px rgba(102,126,234,0.3)">
-          🚀 View Full Dashboard
-        </button>
-        ${signedInFooter}
-      </div>
-    `;
-
-    // Add button handler
-    const openBtn = document.getElementById("openAppBtn");
-    if (openBtn) {
-      openBtn.onclick = () =>
-        chrome.tabs.create({ url: "https://app.vogoplus.app" });
-    }
+    renderResultState(hostname, data);
     await attachSignOutHandler();
   } catch (e) {
     console.error("Error fetching recommendations:", e);
+    if (String(e).includes("AUTH_") || String(e).includes("Authentication failed")) {
+      await clearSession();
+    }
     content.innerHTML = `
-      <div style="color:#dc2626;font-weight:600">❌ Connection Error</div>
-      <div style="font-size:13px;color:#666;margin-top:8px">Could not reach the server. Make sure the backend is running on port 8000.</div>
+      <div style="color:#dc2626;font-weight:600">❌ ${
+        String(e).includes("AUTH_") || String(e).includes("Authentication failed")
+          ? "Session expired"
+          : "Connection Error"
+      }</div>
+      <div style="font-size:13px;color:#666;margin-top:8px">${
+        String(e).includes("AUTH_") || String(e).includes("Authentication failed")
+          ? "Please sign in again to refresh your extension session."
+          : "Could not reach the server. Make sure the backend is running and the API base URL is correct."
+      }</div>
       ${signedInFooter}
     `;
     await attachSignOutHandler();

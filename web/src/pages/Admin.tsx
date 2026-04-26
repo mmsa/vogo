@@ -428,22 +428,10 @@ export default function Admin() {
               </p>
             )}
             <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800">
-              <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-2">
-                To get admin access:
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                This area is restricted to admin accounts. If you should have access,
+                contact support or an existing administrator to update your role.
               </p>
-              <ol className="text-sm text-zinc-600 dark:text-zinc-400 list-decimal list-inside space-y-1">
-                <li>Open browser console (F12)</li>
-                <li>
-                  Run:{" "}
-                  <code className="bg-zinc-200 dark:bg-zinc-700 px-1 rounded">
-                    fetch('/api/dev/make-me-admin', {"{"} method: 'POST',
-                    headers: {"{"} 'Authorization': 'Bearer ' +
-                    JSON.parse(localStorage.getItem('vogoplus-auth') || localStorage.getItem('vogplus-auth') || '{}').state?.accessToken{" "}
-                    {"}"} {"}"}).then(r =&gt; r.json()).then(console.log)
-                  </code>
-                </li>
-                <li>Log out and log back in</li>
-              </ol>
             </div>
             <Button onClick={() => navigate("/")} className="w-full">
               Back to Dashboard

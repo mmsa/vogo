@@ -1,5 +1,7 @@
 """Bank statement upload and processing API endpoints."""
 
+import re
+from difflib import SequenceMatcher
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any
@@ -10,8 +12,11 @@ from app.services.bank_statement_parser import parse_bank_statement
 from app.services.ingest_unknown import ingest_unknown_membership
 from app.services.llm_validate_membership import validate_membership_with_gpt
 from app.services.membership_tiers import get_plan_tier
-from rapidfuzz import fuzz
-import re
+
+try:
+    from rapidfuzz import fuzz
+except ImportError:
+    fuzz = None
 
 router = APIRouter(prefix="/api/bank-statement", tags=["bank-statement"])
 
@@ -21,6 +26,12 @@ def normalize_name(name: str) -> str:
     # Remove common suffixes, convert to lowercase
     name = re.sub(r'\s+(premium|pro|plus|standard|basic|tier|plan|subscription|membership)$', '', name, flags=re.IGNORECASE)
     return name.lower().strip()
+
+
+def fuzzy_ratio(left: str, right: str) -> int:
+    if fuzz is not None:
+        return int(fuzz.ratio(left, right))
+    return int(SequenceMatcher(None, left, right).ratio() * 100)
 
 
 def find_matching_membership(
@@ -43,9 +54,9 @@ def find_matching_membership(
     for membership in all_memberships:
         # Try matching against name, provider_name, and provider_slug
         scores = [
-            fuzz.ratio(normalized_subscription, normalize_name(membership.name)),
-            fuzz.ratio(normalized_subscription, normalize_name(membership.provider_name or "")),
-            fuzz.ratio(normalized_subscription, normalize_name(membership.provider_slug or "")),
+            fuzzy_ratio(normalized_subscription, normalize_name(membership.name)),
+            fuzzy_ratio(normalized_subscription, normalize_name(membership.provider_name or "")),
+            fuzzy_ratio(normalized_subscription, normalize_name(membership.provider_slug or "")),
         ]
         
         max_score = max(scores)
@@ -323,4 +334,3 @@ async def upload_bank_statement(
         'errors': errors,
         'message': f"Found {len(result['subscriptions'])} subscriptions. Added {len(processed_subscriptions)} to your account."
     }
-
