@@ -10,6 +10,9 @@ import {
 const CACHE = "domainCache";
 const PAGE_CACHE = "pageCache";
 const LAST_RECS = "lastRecs";
+const CACHE_VERSION_KEY = "recsCacheVersion";
+const CACHE_VERSION = 2;
+const ALLOWED_KINDS = new Set(["overlap", "tip", "unused"]);
 
 // Debounce helper to avoid spamming API calls
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -36,6 +39,45 @@ function normalizeDomain(hostname: string): string {
   return hostname.replace(/^www\./i, "").toLowerCase();
 }
 
+async function ensureCacheVersion() {
+  const currentVersion = await gs<number>(CACHE_VERSION_KEY, "local");
+  if (currentVersion === CACHE_VERSION) {
+    return;
+  }
+
+  await Promise.all([
+    rm(CACHE, "local"),
+    rm(PAGE_CACHE, "local"),
+    rm(LAST_RECS, "local"),
+    ss(CACHE_VERSION_KEY, CACHE_VERSION, "local"),
+  ]);
+}
+
+function sanitizeSiteScopedData(data: any) {
+  const relevantBenefits = Array.isArray(data?.relevant_benefits)
+    ? data.relevant_benefits.filter((id: unknown) => Number.isInteger(id))
+    : [];
+  const relevantBenefitIds = new Set<number>(relevantBenefits);
+  const recommendations = Array.isArray(data?.recommendations)
+    ? data.recommendations.filter((rec: any) => {
+        if (!rec || !ALLOWED_KINDS.has(rec.kind)) {
+          return false;
+        }
+
+        const benefitMatchIds = Array.isArray(rec.benefit_match_ids)
+          ? rec.benefit_match_ids.filter((id: unknown) => Number.isInteger(id))
+          : [];
+
+        return benefitMatchIds.some((id: number) => relevantBenefitIds.has(id));
+      })
+    : [];
+
+  return {
+    recommendations,
+    relevant_benefits: relevantBenefits,
+  };
+}
+
 async function getCurrentUserId(apiBase: string): Promise<number> {
   const cachedUserId = await gs<number>(USER_ID_KEY);
   if (typeof cachedUserId === "number" && Number.isFinite(cachedUserId)) {
@@ -60,42 +102,28 @@ async function fetchRecommendations(
   userId: number,
   hostname: string
 ) {
-  const fetchForContext = async (domain?: string) => {
-    const payload = domain
-      ? { user_id: userId, context: { domain } }
-      : { user_id: userId };
+  const payload = { user_id: userId, context: { domain: normalizeDomain(hostname) } };
 
-    const response = await authenticatedFetch(
-      "/api/llm/recommendations",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
+  const response = await authenticatedFetch(
+    "/api/llm/recommendations",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
       },
-      apiBase
+      body: JSON.stringify(payload),
+    },
+    apiBase
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      response.status === 401 ? "Authentication failed" : `HTTP ${response.status}`
     );
-
-    if (!response.ok) {
-      throw new Error(
-        response.status === 401 ? "Authentication failed" : `HTTP ${response.status}`
-      );
-    }
-
-    return response.json();
-  };
-
-  const normalizedDomain = normalizeDomain(hostname);
-  const domainScoped = await fetchForContext(normalizedDomain);
-  if (
-    (domainScoped.recommendations?.length || 0) > 0 ||
-    (domainScoped.relevant_benefits?.length || 0) > 0
-  ) {
-    return domainScoped;
   }
 
-  return fetchForContext();
+  const data = await response.json();
+  return sanitizeSiteScopedData(data);
 }
 
 // Process tab URL automatically
@@ -198,6 +226,7 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
 
 async function handlePageContext(msg: any, tabId?: number) {
   const { hostname, isCheckout } = msg;
+  await ensureCacheVersion();
 
   const cache = (await gs<Record<string, any>>(CACHE, "local")) || {};
   const pageCache = (await gs<Record<string, any>>(PAGE_CACHE, "local")) || {};
@@ -213,11 +242,12 @@ async function handlePageContext(msg: any, tabId?: number) {
     now - cached.ts <
       (urlKey && pageCache[urlKey] ? pageTtlMs : domainTtlMs)
   ) {
-    await ss(LAST_RECS, { hostname, data: cached.data, error: null }, "local");
+    const sanitizedCachedData = sanitizeSiteScopedData(cached.data);
+    await ss(LAST_RECS, { hostname, data: sanitizedCachedData, error: null }, "local");
     notifyPopup();
 
     // Show badge if cached data has matches (like Honey)
-    if (cached.data?.recommendations?.length > 0 && tabId) {
+    if (sanitizedCachedData.recommendations?.length > 0 && tabId) {
       try {
         // Inject content script if needed
         await chrome.scripting
@@ -233,9 +263,9 @@ async function handlePageContext(msg: any, tabId?: number) {
           .sendMessage(tabId, {
             type: "SHOW_BADGE",
             message:
-              cached.data.recommendations[0]?.title ||
+              sanitizedCachedData.recommendations[0]?.title ||
               "You have benefits available on this site!",
-            benefitCount: cached.data.relevant_benefits?.length || 0,
+            benefitCount: sanitizedCachedData.relevant_benefits?.length || 0,
           })
           .catch(() => {});
 

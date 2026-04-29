@@ -7,16 +7,17 @@ from pydantic import ValidationError
 
 from app.core.config import settings
 from app.core.openai_client import get_openai_client
-from app.models import Benefit, UserMembership, Membership, Recommendation
-from app.schemas.llm import RecommendationDTO, LLMRecommendationOut
+from app.models import Benefit, UserMembership, Membership
+from app.schemas.llm import RecommendationDTO
 from app.schemas.benefit import BenefitRead
 from app.services.llm_prompts import RECO_PROMPT, ADD_FLOW_PROMPT
 from app.services.id_map import resolve_benefit_ids
-from app.services.membership_tiers import get_plan_tier, is_upgrade
+from app.services.membership_tiers import get_plan_tier
 from sqlalchemy.orm import defer
 
 
 client = get_openai_client()
+ALLOWED_RECOMMENDATION_KINDS = {"overlap", "tip", "unused"}
 
 
 def _generate_mock_recommendations(
@@ -129,22 +130,6 @@ def _generate_mock_recommendations(
                 }
             )
             relevant_benefit_ids.append(benefit.get("id"))
-
-    # Add a bundle/switch recommendation
-    if len(memberships) > 2:
-        # More realistic bundling savings: £50-150/year
-        recommendations.append(
-            {
-                "title": f"Consider consolidating to a premium membership - potential £50-150/year savings",
-                "rationale": f"You're currently managing {len(memberships)} separate memberships ({', '.join([m.get('name', '') for m in memberships[:3]])}). Premium all-in-one memberships like Revolut Metal or Amex Platinum often bundle these benefits at better value. Compare the total annual cost of your current memberships (typically £{len(memberships) * 60}/year) against a premium option. You might get more benefits for less money while simplifying your life to just one card.",
-                "estimated_saving_min": 5000,  # £50
-                "estimated_saving_max": 15000,  # £150
-                "action_url": None,
-                "membership_slug": None,
-                "benefit_match_ids": [],
-                "kind": "bundle",
-            }
-        )
 
     # Add a quick win tip
     if benefits:
@@ -372,16 +357,26 @@ def generate_llm_recommendations(
     recommendations = []
     for rec_data in llm_response.get("recommendations", []):
         try:
+            if rec_data.get("kind") not in ALLOWED_RECOMMENDATION_KINDS:
+                print(
+                    f"Skipping recommendation: disallowed kind {rec_data.get('kind')}"
+                )
+                continue
+
             # Validate benefit IDs
             benefit_ids = resolve_benefit_ids(db, rec_data.get("benefit_match_ids", []))
             
             # Tips and overlaps must only reference benefits the user actually has
-            if rec_data.get("kind") in {"overlap", "tip"}:
+            if rec_data.get("kind") in {"overlap", "tip", "unused"}:
                 if not benefit_ids:
-                    print("Skipping recommendation: missing benefit_match_ids for overlap/tip")
+                    print(
+                        "Skipping recommendation: missing benefit_match_ids for overlap/tip/unused"
+                    )
                     continue
                 if any(bid not in user_benefit_ids for bid in benefit_ids):
-                    print("Skipping recommendation: includes non-user benefit IDs for overlap/tip")
+                    print(
+                        "Skipping recommendation: includes non-user benefit IDs for overlap/tip/unused"
+                    )
                     continue
                 if rec_data.get("kind") == "overlap" and len(benefit_ids) < 2:
                     print("Skipping overlap recommendation: needs at least two user benefits")
@@ -400,43 +395,6 @@ def generate_llm_recommendations(
                 if any(mid not in user_membership_ids for mid in membership_ids):
                     print("Skipping overlap recommendation: includes benefits from non-user memberships")
                     continue
-            
-            # CRITICAL: Validate upgrade recommendations - ensure it's actually an upgrade
-            # NOTE: "switch" recommendations can suggest lower tiers if they save money - that's valid!
-            if rec_data.get("kind") == "upgrade":
-                membership_slug = rec_data.get("membership_slug")
-                if membership_slug:
-                    # Find the suggested membership
-                    # Defer plan_tier to avoid errors if column doesn't exist yet (migration not run)
-                    suggested_membership = (
-                        db.query(Membership)
-                        .options(defer(Membership.plan_tier))
-                        .filter(Membership.provider_slug == membership_slug)
-                        .first()
-                    )
-                    
-                    if suggested_membership:
-                        # Safely get tier - handle case where column might not exist
-                        suggested_tier = getattr(suggested_membership, 'plan_tier', None) or get_plan_tier(
-                            suggested_membership.provider_name or "",
-                            suggested_membership.plan_name or ""
-                        )
-                        
-                        # Find user's current membership from the same provider
-                        user_membership_slug = None
-                        for um, m in user_memberships:
-                            if m.provider_name == suggested_membership.provider_name:
-                                user_membership_slug = m.provider_slug
-                                current_tier = getattr(m, 'plan_tier', None) or get_plan_tier(
-                                    m.provider_name or "",
-                                    m.plan_name or ""
-                                )
-                                
-                                # Check if this is actually an upgrade (must be higher tier, same provider)
-                                if not is_upgrade(current_tier, suggested_tier):
-                                    print(f"Skipping invalid upgrade: {m.name} (tier {current_tier}) -> {suggested_membership.name} (tier {suggested_tier}) - not an upgrade! Use 'switch' kind if suggesting a downgrade that saves money.")
-                                    continue
-                                break
             
             rec_data["benefit_match_ids"] = benefit_ids
 

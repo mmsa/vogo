@@ -8,6 +8,8 @@ from app.services.ai_prompts import RECO_PROMPT, QA_PROMPT
 from app.models import Benefit, UserMembership, Membership
 from app.core.db import get_db
 
+ALLOWED_RECOMMENDATION_KINDS = {"overlap", "tip", "unused"}
+
 
 def build_user_payload(
     db: Session, user_id: int, context: Optional[Dict[str, Any]] = None
@@ -118,6 +120,8 @@ def generate_recommendations(
         # Filter out overlap recommendations where benefits are from the same membership
         filtered_recommendations = []
         for rec in recommendations:
+            if rec.get("kind") not in ALLOWED_RECOMMENDATION_KINDS:
+                continue
             if rec.get("kind") == "overlap" and rec.get("benefit_match_ids"):
                 # Check if benefits are from different memberships
                 benefit_ids = rec.get("benefit_match_ids", [])
