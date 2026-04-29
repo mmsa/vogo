@@ -17,22 +17,11 @@ export default function Recommendations() {
   const [hasMemberships, setHasMemberships] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const allowedKinds = new Set([
-    "upgrade",
-    "switch",
-    "add_membership",
-    "bundle",
-    "overlap",
-    "tip",
-  ]);
+  const allowedKinds = new Set(["overlap", "tip", "unused"]);
   const kindPriority: Record<string, number> = {
-    upgrade: 0,
-    switch: 1,
-    add_membership: 2,
-    bundle: 3,
-    overlap: 4,
-    tip: 5,
-    unused: 6,
+    overlap: 0,
+    tip: 1,
+    unused: 2,
   };
 
   const sortRecommendations = (recs: Recommendation[]) =>

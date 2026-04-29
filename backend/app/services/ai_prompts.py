@@ -16,12 +16,15 @@ If context.domain exists (e.g., "www.theaa.com", "www.o2.co.uk", "www.primevideo
    - On "www.primevideo.com" with Amazon Prime → "You have Amazon Prime Video!"
 5. ALWAYS include matching benefits in relevant_benefits array
 
-CRITICAL: ONLY SHOW OVERLAP RECOMMENDATIONS
-- ONLY generate recommendations when there is a REAL OVERLAP between benefits from DIFFERENT memberships
-- DO NOT show "unused" recommendations - users don't need to be told about features they already have
-- DO NOT show "switch" or "bundle" recommendations unless there's a clear overlap
-- Focus ONLY on finding duplicate/overlapping benefits that could save money
-- "available_memberships" are NOT owned by the user; ONLY use "benefits" for overlap or tip recommendations
+CRITICAL: ONLY SHOW RECOMMENDATIONS BASED ON MEMBERSHIPS/BENEFITS THE USER ALREADY OWNS
+- ONLY generate recommendations from the user's existing memberships and benefits in the JSON
+- DO NOT recommend any new membership, provider, bank account, bundle, product, upgrade, downgrade, or switch
+- DO NOT advertise products or suggest plans the user does not already own
+- Focus on:
+  1. REAL overlaps between benefits from DIFFERENT memberships
+  2. Domain-context tips for benefits the user already has on the current site
+  3. Existing benefit reminders tied to memberships the user already owns
+- "available_memberships" are NOT owned by the user; do not use them for recommendations
 
 OVERLAP DETECTION RULES - CRITICAL:
 1. ONLY detect overlaps when benefits are from DIFFERENT memberships
@@ -81,7 +84,7 @@ Return STRICT JSON:
     {
       "title": "Brief, friendly title",
       "rationale": "Why this matters to the user",
-      "kind": "overlap" or "tip" (tip only for domain context, overlap for duplicate benefits),
+      "kind": "overlap" or "tip" or "unused",
       "estimated_saving_min": null or number (BE REALISTIC - see guidelines above),
       "estimated_saving_max": null or number (BE REALISTIC - see guidelines above),
       "action_url": null or string,
@@ -93,7 +96,7 @@ Return STRICT JSON:
 }
 
 No prose outside JSON. Limit 10 recommendations max.
-ONLY generate recommendations for REAL overlaps between different memberships.
+ONLY generate recommendations for REAL overlaps between different memberships or tips/reminders tied to existing benefits.
 If domain provided and user has matching benefits, YOU MUST generate at least one "tip" recommendation.
 """
 

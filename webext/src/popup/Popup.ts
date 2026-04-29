@@ -8,6 +8,10 @@ import {
   USER_ID_KEY,
 } from "../lib/auth";
 
+const CACHE_VERSION_KEY = "recsCacheVersion";
+const CACHE_VERSION = 2;
+const ALLOWED_KINDS = new Set(["overlap", "tip", "unused"]);
+
 const root = document.getElementById("app")!;
 
 root.innerHTML = `
@@ -38,6 +42,45 @@ const signedInFooter = `
 
 const normalizeDomain = (hostname: string) =>
   hostname.replace(/^www\./i, "").toLowerCase();
+
+const ensureCacheVersion = async () => {
+  const storage = await chrome.storage.local.get(CACHE_VERSION_KEY);
+  if (storage[CACHE_VERSION_KEY] === CACHE_VERSION) {
+    return;
+  }
+
+  await chrome.storage.local.remove([
+    "domainCache",
+    "pageCache",
+    "lastRecs",
+  ]);
+  await chrome.storage.local.set({ [CACHE_VERSION_KEY]: CACHE_VERSION });
+};
+
+const sanitizeSiteScopedData = (data: any) => {
+  const relevantBenefits = Array.isArray(data?.relevant_benefits)
+    ? data.relevant_benefits.filter((id: unknown) => Number.isInteger(id))
+    : [];
+  const relevantBenefitIds = new Set<number>(relevantBenefits);
+  const recommendations = Array.isArray(data?.recommendations)
+    ? data.recommendations.filter((rec: any) => {
+        if (!rec || !ALLOWED_KINDS.has(rec.kind)) {
+          return false;
+        }
+
+        const benefitMatchIds = Array.isArray(rec.benefit_match_ids)
+          ? rec.benefit_match_ids.filter((id: unknown) => Number.isInteger(id))
+          : [];
+
+        return benefitMatchIds.some((id: number) => relevantBenefitIds.has(id));
+      })
+    : [];
+
+  return {
+    recommendations,
+    relevant_benefits: relevantBenefits,
+  };
+};
 
 const renderBenefitsList = (items: any[]) =>
   items
@@ -106,41 +149,28 @@ async function fetchRecommendations(
   userId: number,
   hostname: string
 ) {
-  const fetchForContext = async (domain?: string) => {
-    const payload = domain
-      ? { user_id: userId, context: { domain } }
-      : { user_id: userId };
+  const payload = { user_id: userId, context: { domain: normalizeDomain(hostname) } };
 
-    const authResponse = await authenticatedFetch(
-      "/api/llm/recommendations",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
+  const authResponse = await authenticatedFetch(
+    "/api/llm/recommendations",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
       },
-      apiBase
+      body: JSON.stringify(payload),
+    },
+    apiBase
+  );
+
+  if (!authResponse.ok) {
+    throw new Error(
+      authResponse.status === 401 ? "Authentication failed" : `HTTP ${authResponse.status}`
     );
-
-    if (!authResponse.ok) {
-      throw new Error(
-        authResponse.status === 401 ? "Authentication failed" : `HTTP ${authResponse.status}`
-      );
-    }
-
-    return authResponse.json();
-  };
-
-  const domainScoped = await fetchForContext(normalizeDomain(hostname));
-  if (
-    (domainScoped.recommendations?.length || 0) > 0 ||
-    (domainScoped.relevant_benefits?.length || 0) > 0
-  ) {
-    return domainScoped;
   }
 
-  return fetchForContext();
+  const data = await authResponse.json();
+  return sanitizeSiteScopedData(data);
 }
 
 function renderResultState(hostname: string, data: any) {
@@ -248,6 +278,7 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
 
   const hostname = normalizeDomain(new URL(tab.url).hostname);
   subtitle.textContent = hostname;
+  await ensureCacheVersion();
 
   // Inject content script for badge display (only when popup is opened - activeTab permission)
   try {
@@ -397,7 +428,7 @@ chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
 
   // Use cached data if available and matches current hostname
   if (cachedData && cachedData.hostname === hostname && cachedData.data) {
-    const data = cachedData.data;
+    const data = sanitizeSiteScopedData(cachedData.data);
 
     if (
       (data.recommendations?.length || 0) > 0 ||
